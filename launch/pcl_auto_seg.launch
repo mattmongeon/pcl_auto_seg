@@ -1,0 +1,6 @@
+<launch>
+
+  <node name="pcl_auto_seg" pkg="pcl_auto_seg" type="pcl_auto_seg"/>
+
+</launch>
+
