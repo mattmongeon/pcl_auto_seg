@@ -8,6 +8,10 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  sensor_msgs
+  pcl_ros
+  pcl_conversions
+  pcl_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -104,7 +108,7 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(pcl_auto_seg src/pcl_auto_seg.cpp)
-
+add_executable(save_pt_cloud src/save_pt_cloud.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -114,6 +118,11 @@ add_executable(pcl_auto_seg src/pcl_auto_seg.cpp)
 target_link_libraries(pcl_auto_seg
   ${catkin_LIBRARIES}
 )
+
+target_link_libraries(save_pt_cloud
+  ${catkin_LIBRARIES}
+)
+
 
 #############
 ## Install ##
