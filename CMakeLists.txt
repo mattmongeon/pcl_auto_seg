@@ -107,7 +107,7 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(pcl_auto_seg src/pcl_auto_seg.cpp)
+add_executable(pcl_auto_seg src/pcl_auto_seg.cpp src/segmenter/salient_region.cpp)
 add_executable(save_pt_cloud src/save_pt_cloud.cpp)
 
 ## Add cmake target dependencies of the executable/library
