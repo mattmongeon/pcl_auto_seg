@@ -110,6 +110,7 @@ include_directories(
 add_executable(pcl_auto_seg src/pcl_auto_seg.cpp src/segmenter/salient_region.cpp)
 add_executable(save_pt_cloud src/save_pt_cloud.cpp)
 add_executable(pcl_template_match src/pcl_template_match.cpp)
+add_executable(pcl_scratch src/pcl_scratch.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -128,6 +129,9 @@ target_link_libraries(pcl_template_match
   ${catkin_LIBRARIES}
 )
 
+target_link_libraries(pcl_scratch
+  ${catkin_LIBRARIES}
+)
 
 #############
 ## Install ##
