@@ -433,37 +433,13 @@ void processFile()
     passthrough_x(pScene);
 
 
-	// --- Smooth The Scene --- //
-
-	// Get rid of some of the noise.
-	/*
-	std::cerr << "Smoothing the scene" << std::endl;
-	pcl::PointCloud<pcl::PointNormal> points = smoothCloud(pScene);
-	
-	std::cerr << "Converting pcl::PointNormal to pcl::PointXYZ..." << std::endl;
-
-	pcl::PointCloud<pcl::PointXYZ>::Ptr smoothed( new pcl::PointCloud<pcl::PointXYZ> );
-	smoothed->resize( points.size() );
-	for( std::size_t i = 0; i < points.points.size(); ++i )
-	{
-		smoothed->points[i].x = points.points[i].x;
-		smoothed->points[i].y = points.points[i].y;
-		smoothed->points[i].z = points.points[i].z;
-	}
-
-	std::cerr << "Num points:  " << smoothed->points.size() << std::endl;
-	*/
-
-
 	// --- Calculate Scene Normals --- //
 
-	pcl::PointCloud<pcl::PointXYZ>::Ptr smoothed = pScene;
-	
 	std::cerr << "Computing scene normals" << std::endl;
 	pSceneNormals.reset( new pcl::PointCloud<pcl::Normal>() );
 	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normEst;
 	normEst.setKSearch(10);
-	normEst.setInputCloud( smoothed );
+	normEst.setInputCloud( pScene );
 	normEst.compute( *pSceneNormals );
 
 
@@ -476,11 +452,11 @@ void processFile()
 	pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> seg1; 
 	seg1.setOptimizeCoefficients( true );
 	seg1.setModelType( pcl::SACMODEL_NORMAL_PLANE );
-	seg1.setNormalDistanceWeight( 0.1 );
+	seg1.setNormalDistanceWeight( 0.05 );
 	seg1.setMethodType( pcl::SAC_RANSAC );
 	seg1.setMaxIterations( 100 );
-	seg1.setDistanceThreshold( 0.05 );
-	seg1.setInputCloud( smoothed );
+	seg1.setDistanceThreshold( 0.1 );
+	seg1.setInputCloud( pScene );
 	seg1.setInputNormals( pSceneNormals );
 	// Obtain the plane inliers and coefficients
 	seg1.segment( *inliers_plane, *coefficients_plane );
@@ -489,7 +465,7 @@ void processFile()
 	// Extract the planar inliers from the input cloud
 	std::cerr << "Extracting planar inliers" << std::endl;
 	pcl::ExtractIndices<pcl::PointXYZ> extract;
-	extract.setInputCloud( smoothed );
+	extract.setInputCloud( pScene );
 	extract.setIndices( inliers_plane );
 	extract.setNegative( false );
 
@@ -511,6 +487,28 @@ void processFile()
 	extract_normals.setIndices( inliers_plane );
 	extract_normals.filter( *filteredSceneNormals );
 
+
+	// --- Smooth The Scene --- //
+
+	// Get rid of some of the noise.
+	/*
+	std::cerr << "Smoothing the scene" << std::endl;
+	pcl::PointCloud<pcl::PointNormal> points = smoothCloud(pScene);
+	
+	std::cerr << "Converting pcl::PointNormal to pcl::PointXYZ..." << std::endl;
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr smoothed( new pcl::PointCloud<pcl::PointXYZ> );
+	smoothed->resize( points.size() );
+	for( std::size_t i = 0; i < points.points.size(); ++i )
+	{
+		smoothed->points[i].x = points.points[i].x;
+		smoothed->points[i].y = points.points[i].y;
+		smoothed->points[i].z = points.points[i].z;
+	}
+
+	std::cerr << "Num points:  " << smoothed->points.size() << std::endl;
+	*/
+	
 	
 	// --- Try Object Recognition --- //
 
