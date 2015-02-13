@@ -218,19 +218,12 @@ void visualize(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud)
 	visualizer_o_Ptr->spinOnce(10000000);
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr convertToXYZ( pcl::PointCloud<pcl::PointXYZRGB>::Ptr pCloud )
+template<typename T>
+pcl::PointCloud<pcl::PointXYZ> convertToXYZ( T& cloud )
 {
 	pcl::PointCloud<pcl::PointXYZ> tempCloud;
-	copyPointCloud(*pCloud, tempCloud);
-	return tempCloud.makeShared();
-}
-
-void visualize(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pCloud)
-{
-	// pcl::PointCloud<pcl::PointXYZ> tempCloud;
-	// copyPointCloud(*pCloud, tempCloud);
-	// visualize(tempCloud.makeShared());
-	visualize(convertToXYZ(pCloud));
+	pcl::copyPointCloud(cloud, tempCloud);
+	return tempCloud;
 }
 
 float deg2rad(float alpha)
@@ -238,49 +231,49 @@ float deg2rad(float alpha)
     return (alpha * 0.017453293f);
 }
 
-void passthrough_z(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_passthrough)
+void passthrough_z(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_passthrough)
 {
     // Create the filtering object
-    pcl::PassThrough<pcl::PointXYZRGB> pass;
-    pass.setInputCloud( boost::make_shared<pcl::PointCloud<pcl::PointXYZRGB> >(*cloud_passthrough) );
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud( boost::make_shared<pcl::PointCloud<pcl::PointXYZ> >(*cloud_passthrough) );
     pass.setFilterFieldName ("z");
     pass.setFilterLimits (0.0, 2.0);
     pass.filter(*cloud_passthrough);
 }
 
-void passthrough_z(const sensor_msgs::PointCloud2ConstPtr& input, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_passthrough)
+void passthrough_z(const sensor_msgs::PointCloud2ConstPtr& input, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_passthrough)
 {
     pcl::fromROSMsg(*input, *cloud_passthrough);
 
 	passthrough_z(cloud_passthrough);
 }
 
-void passthrough_y(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_passthrough)
+void passthrough_y(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_passthrough)
 {
     // Create the filtering object
-    pcl::PassThrough<pcl::PointXYZRGB> pass;
-    pass.setInputCloud (boost::make_shared<pcl::PointCloud<pcl::PointXYZRGB> >(*cloud_passthrough));
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud (boost::make_shared<pcl::PointCloud<pcl::PointXYZ> >(*cloud_passthrough));
     pass.setFilterFieldName ("y");
     pass.setFilterLimits (0.0, 5.0);
     pass.filter(*cloud_passthrough);
 }
 
-void passthrough_x(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_passthrough)
+void passthrough_x(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_passthrough)
 {
     // Create the filtering object
-    pcl::PassThrough<pcl::PointXYZRGB> pass;
-    pass.setInputCloud (boost::make_shared<pcl::PointCloud<pcl::PointXYZRGB> >(*cloud_passthrough));
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud (boost::make_shared<pcl::PointCloud<pcl::PointXYZ> >(*cloud_passthrough));
     pass.setFilterFieldName ("x");
     pass.setFilterLimits (-2.0, 2.0);
     pass.filter(*cloud_passthrough);
 }
 
-void processImage(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pScene)
+void processImage(pcl::PointCloud<pcl::PointXYZ>::Ptr pScene)
 {
 	// --- Compute Normals --- //
 		
 	pSceneNormals.reset( new pcl::PointCloud<pcl::Normal>() );
-	pcl::NormalEstimationOMP<pcl::PointXYZRGB, pcl::Normal> mNormEst;
+	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> mNormEst;
 	mNormEst.setKSearch(10);
 	mNormEst.setInputCloud( pScene );
 	mNormEst.compute( *pSceneNormals );
@@ -297,11 +290,11 @@ void processImage(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pScene)
 
 	float scene_ss_ = 0.01f;
 
-	pcl::UniformSampling<pcl::PointXYZRGB> mUniformSampling;
+	pcl::UniformSampling<pcl::PointXYZ> mUniformSampling;
 	mUniformSampling.setInputCloud( pScene );
 	mUniformSampling.setRadiusSearch( scene_ss_ );
 	mUniformSampling.compute( sampled_indices );
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr pSceneKeypoints( new pcl::PointCloud<pcl::PointXYZRGB>() );
+	pcl::PointCloud<pcl::PointXYZ>::Ptr pSceneKeypoints( new pcl::PointCloud<pcl::PointXYZ>() );
 	pcl::copyPointCloud( *pScene, sampled_indices.points, *pSceneKeypoints );
 
 	std::cout << "Downsampled cloud." << std::endl;
@@ -313,7 +306,7 @@ void processImage(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pScene)
 	// --- Compute Descriptors for Keypoints --- //
 
 	std::cout << "Computing keypoint descriptors for scene..." << std::endl;
-	pcl::SHOTEstimationOMP<pcl::PointXYZRGB, pcl::Normal, pcl::SHOT352> descrEst;
+	pcl::SHOTEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::SHOT352> descrEst;
 	//descrEst.setRadiusSearch(mDescrRadius);
 	descrEst.setRadiusSearch(0.02f);
 
@@ -330,7 +323,7 @@ void processImage(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pScene)
 	*/
 }
 
-void recognize(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_passthrough)
+void recognize(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_passthrough)
 {
 	pcl::recognition::ObjRecRANSAC rec(40, 5);
 	rec.addModel(*pCube, *pCubeNormals, "cube");
@@ -341,12 +334,12 @@ void recognize(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_passthrough)
 	std::cerr << objs.size() << std::endl;
 }
 
-pcl::PointCloud<pcl::PointNormal> smoothCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pCloud)
+pcl::PointCloud<pcl::PointNormal> smoothCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud)
 {
 	// from the resampling tutorial.
-	pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree( new pcl::search::KdTree<pcl::PointXYZRGB>);
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree( new pcl::search::KdTree<pcl::PointXYZ>);
 	pcl::PointCloud<pcl::PointNormal> mls_points;
-	pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointNormal> mls;
+	pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
 	mls.setComputeNormals(true);
 
 	mls.setInputCloud(pCloud);
@@ -355,6 +348,8 @@ pcl::PointCloud<pcl::PointNormal> smoothCloud(pcl::PointCloud<pcl::PointXYZRGB>:
 	mls.setSearchRadius(0.03);
 
 	mls.process(mls_points);
+
+	return mls_points;
 }
 
 void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& input)
@@ -362,7 +357,7 @@ void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& input)
     // Do data processing here...
   
     // run pass through filter to shrink point cloud
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_passthrough(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_passthrough(new pcl::PointCloud<pcl::PointXYZ>);
     passthrough_z(input, cloud_passthrough);
     passthrough_y(cloud_passthrough);
     passthrough_x(cloud_passthrough);
@@ -385,7 +380,7 @@ void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& input)
     pub.publish(*cloud_passthrough);
 
     // run ransac to find floor
-    //pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_projected(new pcl::PointCloud<pcl::PointXYZRGB>);
+    //pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_projected(new pcl::PointCloud<pcl::PointXYZ>);
     //ransac(cloud_passthrough, cloud_projected);
     //pub.publish(*cloud_projected);
 }
@@ -394,7 +389,7 @@ void processFile()
 {
 	// --- Read Scene From File --- //
 
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr pScene( new pcl::PointCloud<pcl::PointXYZRGB>() );
+	pcl::PointCloud<pcl::PointXYZ>::Ptr pScene( new pcl::PointCloud<pcl::PointXYZ>() );
 
 	if (pcl::io::loadPCDFile( "/home/mongeon/stuff_on_floor.pcd", *pScene ) < 0)
 	{
@@ -402,14 +397,27 @@ void processFile()
 		return;
 	}
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_passthrough(new pcl::PointCloud<pcl::PointXYZRGB>);
     passthrough_z(pScene);
     passthrough_y(pScene);
     passthrough_x(pScene);
 
-	//pcl::PointCloud<pcl::PointNormal> points = smoothCloud(pScene);
+	pcl::PointCloud<pcl::PointNormal> points = smoothCloud(pScene);
 	
-	visualize(pScene);
+	std::cerr << "Converting pcl::PointNormal to pcl::PointXYZ..." << std::endl;
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr smoothed( new pcl::PointCloud<pcl::PointXYZ> );
+	smoothed->resize( points.size() );
+	for( std::size_t i = 0; i < points.points.size(); ++i )
+	{
+		smoothed->points[i].x = points.points[i].x;
+		smoothed->points[i].y = points.points[i].y;
+		smoothed->points[i].z = points.points[i].z;
+	}
+
+	std::cerr << "Num points:  " << smoothed->points.size() << std::endl;
+	
+	std::cerr << "Passing smoothed points to visualizer..." << std::endl;
+	visualize( smoothed );
 }
 
 int main(int argc, char** argv)
@@ -432,6 +440,7 @@ int main(int argc, char** argv)
     ros::spin();
 }
 
+// 0. From the beginning make use of PointXYZ instead of PointXYZRGB.
 // 1. Remove the table first using planar segmentation - see Ritwik's code
 
 
@@ -444,7 +453,12 @@ int main(int argc, char** argv)
 //  - Jarvis has edited the code to make it work a little better.
 //    * changed an rviz file, launch file, 
 //  - svenschneider/youbot_manipulation
-//    * youbot_arm_kinematics, youbot_arm_moveit
+//    * youbot_arm_kinematics, youbqot_arm_moveit
 //    * see about using this package
 //    * looks like it is done well and is useful
 //    * good place to start, especially if I am going to do the 8-DOF control
+
+
+// Can use topic_tools/throttle to slow down data.
+
+
