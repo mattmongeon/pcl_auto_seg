@@ -63,6 +63,8 @@
 
 #include <iostream>
 #include <list>
+#include <vector>
+#include <utility>
 
 
 ros::Publisher pub;
@@ -70,22 +72,27 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr pCube;
 pcl::PointCloud<pcl::Normal>::Ptr pCubeNormals;
 pcl::PointCloud<pcl::Normal>::Ptr pSceneNormals;
 
+typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudPtr;
+typedef pcl::PointCloud<pcl::Normal>::Ptr NormalCloudPtr;
+typedef std::pair<PointCloudPtr, NormalCloudPtr> ModelPair;
+std::vector<ModelPair> models;
 
-void makeCube()
+
+void makeCube(float side_m)
 {
 	// --- Define Constants --- //
 
-	const float cubeShortSide = 0.03;  // Horizontal side length (m)
-	const float cubeLongSide = 0.03;   // vertical side length (m)
+	// const float cubeShortSide = 0.051;  // Horizontal side length (m)
+	// const float cubeLongSide = 0.051;   // vertical side length (m)
+	float cubeShortSide = side_m;  // Horizontal side length (m)
+	float cubeLongSide = side_m;   // vertical side length (m)
 
 	// How many points on a long side (esitmate) for making test cubes, either
 	// for ICP registration or for testing fit_planes.cpp
-	const int nLongSideHighRes = 54;
-	const int nLongSideLowRes = 27;
+	const int nLongSideHighRes = 100;
+	const int nShortSideHighRes = 100;
 
-	const int nShortSideHighRes = 18;
-	const int nShortSideLowRes = 9;
-		
+	
 	// --- Generate Cube Model Point Cloud --- //
 
 	int npointsBottomFace = nShortSideHighRes* nShortSideHighRes;
@@ -99,10 +106,10 @@ void makeCube()
 	std::cerr << "# dxLongSide: " << dxLongSide << std::endl;
 	std::cerr << "# npointsTotal: " << npointsTotal << std::endl;
 
-	pCube.reset( new pcl::PointCloud<pcl::PointXYZ>() );
-	pCube->width = npointsTotal;
-	pCube->height = 1;
-	pCube->points.resize(npointsTotal); // allocate space for all the points we need
+	pcl::PointCloud<pcl::PointXYZ>::Ptr model( new pcl::PointCloud<pcl::PointXYZ>() );
+	model->width = npointsTotal;
+	model->height = 1;
+	model->points.resize(npointsTotal); // allocate space for all the points we need
 	
 	// make the top and bottom cap faces
 	// these go at y = +- cubeLongSide /2 
@@ -117,9 +124,9 @@ void makeCube()
 	zOffset = - cubeShortSide / 2;
 	for(int i = 0; i < nShortSideHighRes; i++){
 		for(int j = 0; j < nShortSideHighRes; j++){
-			pCube->points[counter].x = i*dxShortSide +  xOffset;
-			pCube->points[counter].y = yval;
-			pCube->points[counter].z = j*dxShortSide + zOffset;
+			model->points[counter].x = i*dxShortSide +  xOffset;
+			model->points[counter].y = yval;
+			model->points[counter].z = j*dxShortSide + zOffset;
 			counter++;
 		}
 	}
@@ -130,9 +137,9 @@ void makeCube()
 	zOffset = - cubeShortSide / 2;
 	for(int i = 0; i < nShortSideHighRes; i++){
 		for(int j = 0; j < nShortSideHighRes; j++){
-			pCube->points[counter].x = i*dxShortSide + xOffset;
-			pCube->points[counter].y = yval;
-			pCube->points[counter].z = j*dxShortSide + zOffset;
+			model->points[counter].x = i*dxShortSide + xOffset;
+			model->points[counter].y = yval;
+			model->points[counter].z = j*dxShortSide + zOffset;
 			counter++;
 		}
 	}
@@ -150,9 +157,9 @@ void makeCube()
 	yOffset = - cubeLongSide / 2;
 	for(int i = 0; i < nShortSideHighRes; i++){
 		for(int j = 0; j < nLongSideHighRes; j++){
-			pCube->points[counter].x = i*dxShortSide + xOffset;
-			pCube->points[counter].y = j*dxLongSide + yOffset;
-			pCube->points[counter].z = zval;
+			model->points[counter].x = i*dxShortSide + xOffset;
+			model->points[counter].y = j*dxLongSide + yOffset;
+			model->points[counter].z = zval;
 			counter++;
 		}
 	}
@@ -162,9 +169,9 @@ void makeCube()
 	yOffset = - cubeLongSide / 2;
 	for(int i = 0; i < nShortSideHighRes; i++){
 		for(int j = 0; j < nLongSideHighRes; j++){
-			pCube->points[counter].x = i*dxShortSide + xOffset;
-			pCube->points[counter].y = j*dxLongSide +  yOffset;
-			pCube->points[counter].z = zval;
+			model->points[counter].x = i*dxShortSide + xOffset;
+			model->points[counter].y = j*dxLongSide +  yOffset;
+			model->points[counter].z = zval;
 			counter++;
 		}
 	}
@@ -174,9 +181,9 @@ void makeCube()
 	yOffset = - cubeLongSide / 2;
 	for(int i = 0; i < nShortSideHighRes; i++){
 		for(int j = 0; j < nLongSideHighRes; j++){
-			pCube->points[counter].x = xval;
-			pCube->points[counter].y = j*dxLongSide + yOffset;
-			pCube->points[counter].z = i*dxShortSide + zOffset;
+			model->points[counter].x = xval;
+			model->points[counter].y = j*dxLongSide + yOffset;
+			model->points[counter].z = i*dxShortSide + zOffset;
 			counter++;
 		}
 	}
@@ -186,9 +193,9 @@ void makeCube()
 	yOffset = - cubeLongSide / 2;
 	for(int i = 0; i < nShortSideHighRes; i++){
 		for(int j = 0; j < nLongSideHighRes; j++){
-			pCube->points[counter].x = xval;
-			pCube->points[counter].y = j*dxLongSide + yOffset;
-			pCube->points[counter].z = i*dxShortSide + zOffset;
+			model->points[counter].x = xval;
+			model->points[counter].y = j*dxLongSide + yOffset;
+			model->points[counter].z = i*dxShortSide + zOffset;
 			counter++;
 		}
 	}
@@ -196,11 +203,16 @@ void makeCube()
 
 	// --- Compute Normals --- //
 
+	NormalCloudPtr normals( new pcl::PointCloud<pcl::Normal> );
 	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> mNormEst;
-	mNormEst.setKSearch(10);
-	mNormEst.setInputCloud( pCube );
-	pCubeNormals.reset( new pcl::PointCloud<pcl::Normal>() );
-	mNormEst.compute( *pCubeNormals );
+	mNormEst.setKSearch(25);
+	mNormEst.setInputCloud( model );
+	mNormEst.compute( *normals );
+
+
+	// --- Add It To The Library --- //
+
+	models.push_back( ModelPair(model, normals) );
 }
 
 void visualize(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud)
@@ -213,7 +225,14 @@ void visualize(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud)
 	visualizer_o_Ptr->addCoordinateSystem(1.0);
 	visualizer_o_Ptr->initCameraParameters();
 	visualizer_o_Ptr->addPointCloud(pCloud, "cloud");
-	visualizer_o_Ptr->addPointCloud(pCube, "cube");
+
+	for( std::size_t i = 0; i < models.size(); ++i )
+	{
+		std::stringstream name;
+		name << "cube" << i;
+		visualizer_o_Ptr->addPointCloud(models[i].first, name.str());
+	}
+	
 	//reload visualizer content
 	visualizer_o_Ptr->spinOnce(10000000);
 }
@@ -323,15 +342,22 @@ void processImage(pcl::PointCloud<pcl::PointXYZ>::Ptr pScene)
 	*/
 }
 
-void recognize(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_passthrough)
+void recognize(pcl::PointCloud<pcl::PointXYZ>::Ptr scene, pcl::PointCloud<pcl::Normal>::Ptr normals)
 {
+	// Create recognition object and add the models to find.
 	pcl::recognition::ObjRecRANSAC rec(40, 5);
-	rec.addModel(*pCube, *pCubeNormals, "cube");
+	for( std::size_t i = 0; i < models.size(); ++i )
+	{
+		std::stringstream name;
+		name << "cube" << i;
+		rec.addModel(*(models[i].first), *(models[i].second), name.str());
+	}
+	
 	std::list<pcl::recognition::ObjRecRANSAC::Output> objs;
-	pcl::PointCloud<pcl::PointXYZ> tempCloud;
-	copyPointCloud(*cloud_passthrough, tempCloud);
-	rec.recognize(tempCloud, *pSceneNormals, objs);
-	std::cerr << objs.size() << std::endl;
+
+	// Try to find objects.
+	rec.recognize(*scene, *normals, objs);
+	std::cerr << "\tNum objects:  " << objs.size() << std::endl;
 }
 
 pcl::PointCloud<pcl::PointNormal> smoothCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud)
@@ -397,10 +423,21 @@ void processFile()
 		return;
 	}
 
+	
+	// --- Use Passthrough Filters --- //
+
+	// Cut down on some of the scene clutter.
+	std::cerr << "Using passthrough filters." << std::endl;
     passthrough_z(pScene);
     passthrough_y(pScene);
     passthrough_x(pScene);
 
+
+	// --- Smooth The Scene --- //
+
+	// Get rid of some of the noise.
+	/*
+	std::cerr << "Smoothing the scene" << std::endl;
 	pcl::PointCloud<pcl::PointNormal> points = smoothCloud(pScene);
 	
 	std::cerr << "Converting pcl::PointNormal to pcl::PointXYZ..." << std::endl;
@@ -415,9 +452,76 @@ void processFile()
 	}
 
 	std::cerr << "Num points:  " << smoothed->points.size() << std::endl;
+	*/
+
+
+	// --- Calculate Scene Normals --- //
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr smoothed = pScene;
+	
+	std::cerr << "Computing scene normals" << std::endl;
+	pSceneNormals.reset( new pcl::PointCloud<pcl::Normal>() );
+	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normEst;
+	normEst.setKSearch(10);
+	normEst.setInputCloud( smoothed );
+	normEst.compute( *pSceneNormals );
+
+
+	// --- Get Rid Of Table --- //
+
+	pcl::PointIndices::Ptr inliers_plane( new pcl::PointIndices );
+	pcl::ModelCoefficients::Ptr coefficients_plane( new pcl::ModelCoefficients );
+
+	std::cerr << "Segmenting the table" << std::endl;
+	pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> seg1; 
+	seg1.setOptimizeCoefficients( true );
+	seg1.setModelType( pcl::SACMODEL_NORMAL_PLANE );
+	seg1.setNormalDistanceWeight( 0.1 );
+	seg1.setMethodType( pcl::SAC_RANSAC );
+	seg1.setMaxIterations( 100 );
+	seg1.setDistanceThreshold( 0.05 );
+	seg1.setInputCloud( smoothed );
+	seg1.setInputNormals( pSceneNormals );
+	// Obtain the plane inliers and coefficients
+	seg1.segment( *inliers_plane, *coefficients_plane );
+	//std::cerr << "Plane coefficients: " << *coefficients_plane << std::endl;
+
+	// Extract the planar inliers from the input cloud
+	std::cerr << "Extracting planar inliers" << std::endl;
+	pcl::ExtractIndices<pcl::PointXYZ> extract;
+	extract.setInputCloud( smoothed );
+	extract.setIndices( inliers_plane );
+	extract.setNegative( false );
+
+	// Write the planar inliers to disk
+	std::cerr << "Filtering out the plane" << std::endl;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane( new pcl::PointCloud<pcl::PointXYZ> );
+	extract.filter( *cloud_plane );
+
+	// Remove the planar inliers, extract the rest
+	pcl::PointCloud<pcl::PointXYZ>::Ptr filteredScene( new pcl::PointCloud<pcl::PointXYZ> );
+	extract.setNegative( true );
+	extract.filter( *filteredScene );
+
+	std::cerr << "removing normals" << std::endl;
+	pcl::ExtractIndices<pcl::Normal> extract_normals;
+	pcl::PointCloud<pcl::Normal>::Ptr filteredSceneNormals( new pcl::PointCloud<pcl::Normal> );
+	extract_normals.setNegative( true );
+	extract_normals.setInputCloud( pSceneNormals );
+	extract_normals.setIndices( inliers_plane );
+	extract_normals.filter( *filteredSceneNormals );
+
+	
+	// --- Try Object Recognition --- //
+
+	std::cerr << "Running through the recognizer." << std::endl;
+	recognize(filteredScene, filteredSceneNormals);
+
+
+	// --- See What We Have --- //
 	
 	std::cerr << "Passing smoothed points to visualizer..." << std::endl;
-	visualize( smoothed );
+	visualize( filteredScene );
 }
 
 int main(int argc, char** argv)
@@ -427,7 +531,8 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
 	// Create the cube model.
-	makeCube();
+	makeCube(0.051);
+	makeCube(0.1);
 	
     // Create a ROS subscriber for the input point cloud
     //ros::Subscriber sub = nh.subscribe ("camera/depth_registered/points", 1, cloud_cb);
