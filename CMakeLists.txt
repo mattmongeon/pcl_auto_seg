@@ -131,6 +131,8 @@ target_link_libraries(pcl_template_match
 
 target_link_libraries(pcl_scratch
   ${catkin_LIBRARIES}
+  libvtkCommon.so
+  libvtkFiltering.so
 )
 
 #############
