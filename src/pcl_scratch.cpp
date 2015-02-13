@@ -345,7 +345,7 @@ void processImage(pcl::PointCloud<pcl::PointXYZ>::Ptr pScene)
 void recognize(pcl::PointCloud<pcl::PointXYZ>::Ptr scene, pcl::PointCloud<pcl::Normal>::Ptr normals)
 {
 	// Create recognition object and add the models to find.
-	pcl::recognition::ObjRecRANSAC rec(40, 5);
+	pcl::recognition::ObjRecRANSAC rec(0.3, 10);
 	for( std::size_t i = 0; i < models.size(); ++i )
 	{
 		std::stringstream name;
@@ -491,9 +491,9 @@ void processFile()
 	// --- Smooth The Scene --- //
 
 	// Get rid of some of the noise.
-	/*
+
 	std::cerr << "Smoothing the scene" << std::endl;
-	pcl::PointCloud<pcl::PointNormal> points = smoothCloud(pScene);
+	pcl::PointCloud<pcl::PointNormal> points = smoothCloud(filteredScene);
 	
 	std::cerr << "Converting pcl::PointNormal to pcl::PointXYZ..." << std::endl;
 
@@ -507,19 +507,28 @@ void processFile()
 	}
 
 	std::cerr << "Num points:  " << smoothed->points.size() << std::endl;
-	*/
+
+
+	// --- Calculate Normals For Smoothed Scene --- //
+
+	std::cerr << "Computing smoothed scene normals" << std::endl;
+	pcl::PointCloud<pcl::Normal>::Ptr smoothedNormals( new pcl::PointCloud<pcl::Normal>() );
+	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> smoothedNormEst;
+	smoothedNormEst.setKSearch(50);
+	smoothedNormEst.setInputCloud( smoothed );
+	smoothedNormEst.compute( *smoothedNormals );
 	
 	
 	// --- Try Object Recognition --- //
 
 	std::cerr << "Running through the recognizer." << std::endl;
-	recognize(filteredScene, filteredSceneNormals);
+	recognize(smoothed, smoothedNormals);
 
 
 	// --- See What We Have --- //
 	
 	std::cerr << "Passing smoothed points to visualizer..." << std::endl;
-	visualize( filteredScene );
+	visualize( smoothed );
 }
 
 int main(int argc, char** argv)
