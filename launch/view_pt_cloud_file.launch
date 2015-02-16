@@ -1,0 +1,8 @@
+<launch>
+
+  <node name="view_pt_cloud_file" pkg="pcl_auto_seg" type="view_pt_cloud_file">
+    <param name="file_name" value="/home/mongeon/medium_block_on_desk_90.pcd"/>
+  </node>
+
+</launch>
+
