@@ -7,6 +7,9 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 
+#include <iostream>
+
+
 void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 {
     // We are simply going to save a point cloud to file for now.
@@ -14,7 +17,8 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
     pcl::fromROSMsg(*input, *cloud);
 
     pcl::io::savePCDFileASCII("/home/mongeon/point_cloud.pcd", *cloud);
-
+	std::cerr << "File saved!" << std::endl;
+	
     exit(0);
 }
 
