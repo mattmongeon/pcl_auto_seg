@@ -11,3 +11,9 @@
 * Can I use fewer template cubes?
 
 * Need to put the template matching stuff into a ROS node.
+
+* How to use the transformation information?
+  - The transformation info will be from the origin of the ASUS to the box.
+  - Can get transformation from base_link to gripper_palm_link from tf.
+  - Can measure from the gripper palm's frame to the center of the ASUS to generate a transformation matrix.
+  - Then getting the transformation matrix from the block to the base_link is as simple as chaining the matrices.
