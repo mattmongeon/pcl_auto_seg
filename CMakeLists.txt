@@ -112,6 +112,7 @@ add_executable(save_pt_cloud src/save_pt_cloud.cpp)
 add_executable(pcl_template_match src/pcl_template_match.cpp)
 add_executable(pcl_scratch src/pcl_scratch.cpp)
 add_executable(view_pt_cloud_file src/view_pt_cloud_file.cpp)
+add_executable(pcl_tut_temp_align src/pcl_tut_temp_align.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -137,6 +138,12 @@ target_link_libraries(pcl_scratch
 )
 
 target_link_libraries(view_pt_cloud_file
+  ${catkin_LIBRARIES}
+  libvtkCommon.so
+  libvtkFiltering.so
+)
+
+target_link_libraries(pcl_tut_temp_align
   ${catkin_LIBRARIES}
   libvtkCommon.so
   libvtkFiltering.so
