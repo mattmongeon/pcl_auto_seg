@@ -492,20 +492,36 @@ void processFile()
 	object_templates.clear();
 
 	FeatureCloud template_cloud1;
-	std::cerr << "Cube size 0.025" << std::endl;
-	template_cloud1.make90Cube(0.025);
+	std::cerr << "Cube size 0.03" << std::endl;
+	template_cloud1.make90Cube(0.03);
 	object_templates.push_back(template_cloud1);
 
-	FeatureCloud template_cloud2;
-	std::cerr << "Cube size 0.04" << std::endl;
-	template_cloud2.make90Cube(0.04);
-	object_templates.push_back(template_cloud2);
-	
-	FeatureCloud template_cloud3;
-	std::cerr << "Cube size 0.051" << std::endl;
-	template_cloud3.make90Cube(0.051);
-	object_templates.push_back(template_cloud3);
+	// FeatureCloud template_cloud2;
+	// std::cerr << "Cube size 0.035" << std::endl;
+	// template_cloud2.make90Cube(0.035);
+	// object_templates.push_back(template_cloud2);
 
+	FeatureCloud template_cloud3;
+	std::cerr << "Cube size 0.04" << std::endl;
+	template_cloud3.make90Cube(0.04);
+	object_templates.push_back(template_cloud3);
+	
+	FeatureCloud template_cloud4;
+	std::cerr << "Cube size 0.045" << std::endl;
+	template_cloud4.make90Cube(0.045);
+	object_templates.push_back(template_cloud4);
+
+	FeatureCloud template_cloud5;
+	std::cerr << "Cube size 0.05" << std::endl;
+	template_cloud5.make90Cube(0.05);
+	object_templates.push_back(template_cloud5);
+
+	FeatureCloud template_cloud6;
+	std::cerr << "Cube size 0.055" << std::endl;
+	template_cloud6.make90Cube(0.055);
+	object_templates.push_back(template_cloud6);
+	
+	/*
 	FeatureCloud template_cloud4;
 	std::cerr << "Cube size 0.025" << std::endl;
 	template_cloud4.makeAlignedCube(0.025);
@@ -521,7 +537,6 @@ void processFile()
 	template_cloud6.makeAlignedCube(0.051);
 	object_templates.push_back(template_cloud6);
 
-	/*
 	FeatureCloud template_cloud4;
 	std::cerr << "Cube size 0.075" << std::endl;
 	template_cloud4.makeCube(0.075);
@@ -707,7 +722,7 @@ void processFile()
 	
 	// Save the aligned template for visualization
 	pcl::PointCloud<pcl::PointXYZ> transformed_cloud;
-	pcl::transformPointCloud (*best_template.getPointCloud (), transformed_cloud, best_alignment.final_transformation);
+	pcl::transformPointCloud( *best_template.getPointCloud(), transformed_cloud, best_alignment.final_transformation );
 
 	std::vector< pcl::PointCloud<pcl::PointXYZ>::Ptr > clouds;
 	clouds.push_back(transformed_cloud.makeShared());
