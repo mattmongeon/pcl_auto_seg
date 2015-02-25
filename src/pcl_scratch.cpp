@@ -52,6 +52,7 @@
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/shot_omp.h>
 #include <pcl/features/board.h>
+#include <pcl/features/fpfh_omp.h>
 #include <pcl/keypoints/uniform_sampling.h>
 #include <pcl/recognition/cg/hough_3d.h>
 #include <pcl/recognition/cg/geometric_consistency.h>
@@ -60,6 +61,7 @@
 #include <pcl/kdtree/impl/kdtree_flann.hpp>
 #include <pcl/common/transforms.h>
 #include <pcl/console/parse.h>
+#include <pcl/registration/sample_consensus_prerejective.h>
 
 #include <iostream>
 #include <list>
@@ -89,15 +91,15 @@ void makeCube(float side_m)
 
 	// How many points on a long side (esitmate) for making test cubes, either
 	// for ICP registration or for testing fit_planes.cpp
-	const int nLongSideHighRes = 100;
-	const int nShortSideHighRes = 100;
+	const int nLongSideHighRes = 25;
+	const int nShortSideHighRes = 25;
 
 	
 	// --- Generate Cube Model Point Cloud --- //
 
-	int npointsBottomFace = nShortSideHighRes* nShortSideHighRes;
-	int npointsSideFace = nShortSideHighRes* nLongSideHighRes;
-	int npointsTotal = 2*npointsBottomFace + 4 *npointsSideFace;
+	int npointsBottomFace = nShortSideHighRes * nShortSideHighRes;
+	int npointsSideFace = nShortSideHighRes * nLongSideHighRes;
+	int npointsTotal = npointsBottomFace + 2 * npointsSideFace;
 	
 	float dxShortSide = cubeShortSide / (float)nShortSideHighRes;
 	float dxLongSide =  cubeLongSide /  (float)nLongSideHighRes;
@@ -109,7 +111,7 @@ void makeCube(float side_m)
 	pcl::PointCloud<pcl::PointXYZ>::Ptr model( new pcl::PointCloud<pcl::PointXYZ>() );
 	model->width = npointsTotal;
 	model->height = 1;
-	model->points.resize(npointsTotal); // allocate space for all the points we need
+	//model->points.resize(npointsTotal); // allocate space for all the points we need
 	
 	// make the top and bottom cap faces
 	// these go at y = +- cubeLongSide /2 
@@ -117,19 +119,22 @@ void makeCube(float side_m)
 	int counter = 0;
 	float xval, yval, zval;
 	float xOffset, yOffset, zOffset;
-	
+
+	/*
 	// top face
 	yval = cubeLongSide / 2;
 	xOffset = - cubeShortSide / 2;
 	zOffset = - cubeShortSide / 2;
 	for(int i = 0; i < nShortSideHighRes; i++){
 		for(int j = 0; j < nShortSideHighRes; j++){
+			model->points.push_back(pcl::PointXYZ());
 			model->points[counter].x = i*dxShortSide +  xOffset;
 			model->points[counter].y = yval;
 			model->points[counter].z = j*dxShortSide + zOffset;
 			counter++;
 		}
 	}
+	*/
 
 	// bottom face
 	yval = -cubeLongSide / 2;
@@ -137,13 +142,13 @@ void makeCube(float side_m)
 	zOffset = - cubeShortSide / 2;
 	for(int i = 0; i < nShortSideHighRes; i++){
 		for(int j = 0; j < nShortSideHighRes; j++){
+			model->points.push_back(pcl::PointXYZ());
 			model->points[counter].x = i*dxShortSide + xOffset;
 			model->points[counter].y = yval;
 			model->points[counter].z = j*dxShortSide + zOffset;
 			counter++;
 		}
 	}
-
 
 	// make each side plane
 	// 1) z= -cubeShortSide/2, x: from - cubeShortSide/2 to cubeShortSide/2, y from: -cubeLongSide/2, to cubeLongSide/2
@@ -157,6 +162,7 @@ void makeCube(float side_m)
 	yOffset = - cubeLongSide / 2;
 	for(int i = 0; i < nShortSideHighRes; i++){
 		for(int j = 0; j < nLongSideHighRes; j++){
+			model->points.push_back(pcl::PointXYZ());
 			model->points[counter].x = i*dxShortSide + xOffset;
 			model->points[counter].y = j*dxLongSide + yOffset;
 			model->points[counter].z = zval;
@@ -164,6 +170,7 @@ void makeCube(float side_m)
 		}
 	}
 
+	/*
 	zval = cubeShortSide / 2;
 	xOffset = - cubeShortSide / 2;
 	yOffset = - cubeLongSide / 2;
@@ -187,12 +194,14 @@ void makeCube(float side_m)
 			counter++;
 		}
 	}
-
+	*/
+	
 	xval = cubeShortSide / 2;
 	zOffset = - cubeShortSide / 2;
 	yOffset = - cubeLongSide / 2;
 	for(int i = 0; i < nShortSideHighRes; i++){
 		for(int j = 0; j < nLongSideHighRes; j++){
+			model->points.push_back(pcl::PointXYZ());
 			model->points[counter].x = xval;
 			model->points[counter].y = j*dxLongSide + yOffset;
 			model->points[counter].z = i*dxShortSide + zOffset;
@@ -417,7 +426,7 @@ void processFile()
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr pScene( new pcl::PointCloud<pcl::PointXYZ>() );
 
-	if (pcl::io::loadPCDFile( "/home/mongeon/stuff_on_floor.pcd", *pScene ) < 0)
+	if (pcl::io::loadPCDFile( "/home/mongeon/medium_block_on_desk_90.pcd", *pScene ) < 0)
 	{
 		std::cout << "Error loading scene cloud." << std::endl;
 		return;
@@ -455,7 +464,7 @@ void processFile()
 	seg1.setNormalDistanceWeight( 0.05 );
 	seg1.setMethodType( pcl::SAC_RANSAC );
 	seg1.setMaxIterations( 100 );
-	seg1.setDistanceThreshold( 0.1 );
+	seg1.setDistanceThreshold( 0.03 );
 	seg1.setInputCloud( pScene );
 	seg1.setInputNormals( pSceneNormals );
 	// Obtain the plane inliers and coefficients
@@ -487,48 +496,79 @@ void processFile()
 	extract_normals.setIndices( inliers_plane );
 	extract_normals.filter( *filteredSceneNormals );
 
-
-	// --- Smooth The Scene --- //
-
-	// Get rid of some of the noise.
-
-	std::cerr << "Smoothing the scene" << std::endl;
-	pcl::PointCloud<pcl::PointNormal> points = smoothCloud(filteredScene);
+	visualize( filteredScene );
 	
-	std::cerr << "Converting pcl::PointNormal to pcl::PointXYZ..." << std::endl;
 
-	pcl::PointCloud<pcl::PointXYZ>::Ptr smoothed( new pcl::PointCloud<pcl::PointXYZ> );
-	smoothed->resize( points.size() );
-	for( std::size_t i = 0; i < points.points.size(); ++i )
+	// --- Estimate Normals For Scene --- //
+
+	std::cerr << "Computing scene normals" << std::endl;
+	pSceneNormals.reset( new pcl::PointCloud<pcl::Normal>() );
+	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normEst2;
+	normEst2.setRadiusSearch( 0.01 );
+	normEst2.setInputCloud( filteredScene );
+	normEst2.compute( *pSceneNormals );
+
+
+	// --- Estimate Features --- //
+
+	typedef pcl::PointNormal PointNT;
+	typedef pcl::PointCloud<PointNT> PointCloudT;
+	typedef pcl::FPFHSignature33 FeatureT;
+	typedef pcl::FPFHEstimationOMP<PointNT,PointNT,FeatureT> FeatureEstimationT;
+	typedef pcl::PointCloud<FeatureT> FeatureCloudT;
+	typedef pcl::visualization::PointCloudColorHandlerCustom<PointNT> ColorHandlerT;
+
+	// Estimate features
+	
+	pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fest;
+	pcl::PointCloud<pcl::FPFHSignature33>::Ptr objectFeatures (new pcl::PointCloud<pcl::FPFHSignature33>);
+	pcl::PointCloud<pcl::FPFHSignature33>::Ptr sceneFeatures (new pcl::PointCloud<pcl::FPFHSignature33>);
+	fest.setRadiusSearch( 0.025 );
+
+	fest.setInputCloud( models[models.size()-1].first );
+	fest.setInputNormals( models[models.size()-1].second );
+	fest.compute( *objectFeatures );
+
+	fest.setInputCloud( filteredScene );
+	fest.setInputNormals( filteredSceneNormals );
+	fest.compute( *sceneFeatures );
+
+	// Perform alignment
+
+	// !! If this doesn't work, try doing the downsampling like in the actual tutorial
+	
+	pcl::SampleConsensusPrerejective<pcl::PointXYZ, pcl::PointXYZ, pcl::FPFHSignature33> align;
+	align.setInputSource( models[models.size()-1].first );
+	align.setSourceFeatures( objectFeatures );
+	align.setInputTarget( filteredScene );
+	align.setTargetFeatures( sceneFeatures );
+	align.setMaximumIterations( 10000 ); // Number of RANSAC iterations
+	align.setNumberOfSamples( 3 ); // Number of points to sample for generating/prerejecting a pose
+	align.setCorrespondenceRandomness( 2 ); // Number of nearest features to use
+	align.setSimilarityThreshold( 0.9f ); // Polygonal edge length similarity threshold
+	float leaf = 0.005f;
+	align.setMaxCorrespondenceDistance( 1.5f * leaf ); // Inlier threshold
+	align.setInlierFraction( 0.25f ); // Required inlier fraction for accepting a pose hypothesis
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr objectAligned( new pcl::PointCloud<pcl::PointXYZ> );
 	{
-		smoothed->points[i].x = points.points[i].x;
-		smoothed->points[i].y = points.points[i].y;
-		smoothed->points[i].z = points.points[i].z;
+		align.align( *objectAligned );
 	}
 
-	std::cerr << "Num points:  " << smoothed->points.size() << std::endl;
-
-
-	// --- Calculate Normals For Smoothed Scene --- //
-
-	std::cerr << "Computing smoothed scene normals" << std::endl;
-	pcl::PointCloud<pcl::Normal>::Ptr smoothedNormals( new pcl::PointCloud<pcl::Normal>() );
-	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> smoothedNormEst;
-	smoothedNormEst.setKSearch(50);
-	smoothedNormEst.setInputCloud( smoothed );
-	smoothedNormEst.compute( *smoothedNormals );
+	if( align.hasConverged() )
+	{
+		std::cerr << "CONVERGED!!" << std::endl;
+	}
+	else
+	{
+		std::cerr << "NOTHING" << std::endl;
+	}
 	
-	
-	// --- Try Object Recognition --- //
-
-	std::cerr << "Running through the recognizer." << std::endl;
-	recognize(smoothed, smoothedNormals);
-
 
 	// --- See What We Have --- //
 	
 	std::cerr << "Passing smoothed points to visualizer..." << std::endl;
-	visualize( smoothed );
+	//visualize( smoothed );
 }
 
 int main(int argc, char** argv)
@@ -539,7 +579,13 @@ int main(int argc, char** argv)
 
 	// Create the cube model.
 	makeCube(0.051);
+	/*
 	makeCube(0.1);
+	makeCube(0.15);
+	makeCube(0.2);
+	makeCube(0.25);
+	makeCube(0.3);
+	*/
 	
     // Create a ROS subscriber for the input point cloud
     //ros::Subscriber sub = nh.subscribe ("camera/depth_registered/points", 1, cloud_cb);
@@ -558,14 +604,13 @@ int main(int argc, char** argv)
 
 // Backpocket - can use cylinders using Ritwik's code
 // Can simulate the output using a Python script and move on to MoveIt!
-// Work on this until Monday, and then transition to MoveIt! for a little while.
 
 
 // youbot_manipulation - can download from canvas, also on the youBot
 //  - Jarvis has edited the code to make it work a little better.
 //    * changed an rviz file, launch file, 
 //  - svenschneider/youbot_manipulation
-//    * youbot_arm_kinematics, youbqot_arm_moveit
+//    * youbot_arm_kinematics, youbot_arm_moveit
 //    * see about using this package
 //    * looks like it is done well and is useful
 //    * good place to start, especially if I am going to do the 8-DOF control
