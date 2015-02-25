@@ -168,8 +168,6 @@ public:
 
 	void makeCube(float side_m)
 		{
-			xyz_ = PointCloud::Ptr (new PointCloud);
-
 			// --- Define Constants --- //
 
 			float cubeShortSide = side_m;  // Horizontal side length (m)
@@ -203,8 +201,8 @@ public:
 	
 			// bottom face
 			yval = -cubeLongSide / 2;
-			xOffset = - cubeShortSide / 2;
-			zOffset = 0; //- cubeShortSide / 2;
+			xOffset = -cubeShortSide / 2;
+			zOffset = -cubeShortSide / 2;
 			for(int i = 0; i < nShortSideHighRes; i++){
 				for(int j = 0; j < nShortSideHighRes; j++){
 					model->points.push_back(pcl::PointXYZ());
@@ -223,7 +221,7 @@ public:
 			// 4) x = -cubeShortSide/2, z: from - cubeShortSide/2 to cubeShortSide/2, y from: -cubeLongSide/2, to cubeLongSide/2
 
 
-			zval = 0; //-cubeShortSide / 2;
+			zval = -cubeShortSide / 2;
 			xOffset = - cubeShortSide / 2;
 			yOffset = - cubeLongSide / 2;
 			for(int i = 0; i < nShortSideHighRes; i++){
@@ -237,7 +235,7 @@ public:
 			}
 
 			xval = cubeShortSide / 2;
-			zOffset = 0; //- cubeShortSide / 2;
+			zOffset = -cubeShortSide / 2;
 			yOffset = - cubeLongSide / 2;
 			for(int i = 0; i < nShortSideHighRes; i++){
 				for(int j = 0; j < nLongSideHighRes; j++){
@@ -250,19 +248,8 @@ public:
 			}
 
 
-			// --- Compute Normals --- //
-
-			std::cerr << "Computing normals" << std::endl;
-			NormalCloudPtr normals( new pcl::PointCloud<pcl::Normal> );
-			pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> mNormEst;
-			mNormEst.setKSearch(25);
-			mNormEst.setInputCloud( model );
-			mNormEst.compute( *normals );
-
-
 			// --- Add It To The Library --- //
 
-			std::cerr << "Processing input" << std::endl;
 			setInputCloud(model);
 		}
 
@@ -302,15 +289,10 @@ protected:
 		normals_ = SurfaceNormals::Ptr (new SurfaceNormals);
 
 		pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> norm_est;
-		std::cerr << "\tsetInputCloud" << std::endl;
 		norm_est.setInputCloud (xyz_);
-		std::cerr << "\tsetSearchMethod" << std::endl;
 		norm_est.setSearchMethod (search_method_xyz_);
-		std::cerr << "\tsetRadiusSearch" << std::endl;
 		norm_est.setRadiusSearch (normal_radius_);
-		std::cerr << "\tcompute" << std::endl;
 		norm_est.compute (*normals_);
-		std::cerr << "\tDone" << std::endl;
 	}
 
     // Compute the local feature descriptors
@@ -321,17 +303,11 @@ protected:
 			features_ = LocalFeatures::Ptr (new LocalFeatures);
 
 			pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfh_est;
-			std::cerr << "\tsetInputCloud" << std::endl;
 			fpfh_est.setInputCloud (xyz_);
-			std::cerr << "\tsetInputNormals" << std::endl;
 			fpfh_est.setInputNormals (normals_);
-			std::cerr << "\tsetSearchMethod" << std::endl;
 			fpfh_est.setSearchMethod (search_method_xyz_);
-			std::cerr << "\tsetRadiusSearch" << std::endl;
 			fpfh_est.setRadiusSearch (feature_radius_);
-			std::cerr << "\tcompute" << std::endl;
 			fpfh_est.compute (*features_);
-			std::cerr << "\tDone" << std::endl;
 		}
 
 private:
@@ -500,10 +476,14 @@ void processFile()
 	object_templates.push_back(template_cloud8);
 	*/
 
-	// Load the target cloud PCD file
+	//--- Load the target cloud PCD file --- //
+	
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::io::loadPCDFile( "/home/mongeon/medium_block_on_desk_90.pcd", *cloud );
 
+
+	// --- Z-Filter And Downsample Cloud --- //
+	
 	std::cerr << "Preprocessing cloud" << std::endl;
 	// Preprocess the cloud by...
 	// ...removing distant points
@@ -524,12 +504,72 @@ void processFile()
 	vox_grid.filter (*tempCloud);
 	cloud = tempCloud; 
 
+
+	// --- Calculate Scene Normals --- //
+
+	std::cerr << "Computing scene normals" << std::endl;
+	pcl::PointCloud<pcl::Normal>::Ptr pSceneNormals( new pcl::PointCloud<pcl::Normal>() );
+	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normEst;
+	normEst.setKSearch(10);
+	normEst.setInputCloud( cloud );
+	normEst.compute( *pSceneNormals );
+
+
+	// --- Get Rid Of Table --- //
+
+	pcl::PointIndices::Ptr inliers_plane( new pcl::PointIndices );
+	pcl::ModelCoefficients::Ptr coefficients_plane( new pcl::ModelCoefficients );
+
+	std::cerr << "Segmenting the table" << std::endl;
+	pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> seg1; 
+	seg1.setOptimizeCoefficients( true );
+	seg1.setModelType( pcl::SACMODEL_NORMAL_PLANE );
+	seg1.setNormalDistanceWeight( 0.05 );
+	seg1.setMethodType( pcl::SAC_RANSAC );
+	seg1.setMaxIterations( 100 );
+	seg1.setDistanceThreshold( 0.03 );
+	seg1.setInputCloud( cloud );
+	seg1.setInputNormals( pSceneNormals );
+	// Obtain the plane inliers and coefficients
+	seg1.segment( *inliers_plane, *coefficients_plane );
+	//std::cerr << "Plane coefficients: " << *coefficients_plane << std::endl;
+
+	// Extract the planar inliers from the input cloud
+	std::cerr << "Extracting planar inliers" << std::endl;
+	pcl::ExtractIndices<pcl::PointXYZ> extract;
+	extract.setInputCloud( cloud );
+	extract.setIndices( inliers_plane );
+	extract.setNegative( false );
+
+	// Write the planar inliers to disk
+	std::cerr << "Filtering out the plane" << std::endl;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane( new pcl::PointCloud<pcl::PointXYZ> );
+	extract.filter( *cloud_plane );
+
+	// Remove the planar inliers, extract the rest
+	pcl::PointCloud<pcl::PointXYZ>::Ptr filteredScene( new pcl::PointCloud<pcl::PointXYZ> );
+	extract.setNegative( true );
+	extract.filter( *filteredScene );
+
+	std::cerr << "removing normals" << std::endl;
+	pcl::ExtractIndices<pcl::Normal> extract_normals;
+	pcl::PointCloud<pcl::Normal>::Ptr filteredSceneNormals( new pcl::PointCloud<pcl::Normal> );
+	extract_normals.setNegative( true );
+	extract_normals.setInputCloud( pSceneNormals );
+	extract_normals.setIndices( inliers_plane );
+	extract_normals.filter( *filteredSceneNormals );	
+	
+
+	// --- Set As Our Target Cloud --- //
+	
 	// Assign to the target FeatureCloud
 	FeatureCloud target_cloud;
 	std::cerr << "Setting intput cloud for target FeatureCloud" << std::endl;
-	target_cloud.setInputCloud (cloud);
+	target_cloud.setInputCloud(filteredScene);
+
+
+	// --- Set Up Template Container --- //
 	
-	// Set the TemplateAlignment inputs
 	TemplateAlignment template_align;
 	std::cerr << "Entering loop for adding template cloud" << std::endl;
 	for (size_t i = 0; i < object_templates.size (); ++i)
@@ -538,8 +578,11 @@ void processFile()
 		template_align.addTemplateCloud (object_templates[i]);
 	}
 	std::cerr << "Setting target cloud for the TemplateAlignment object" << std::endl;
-	template_align.setTargetCloud (target_cloud);
+	template_align.setTargetCloud( target_cloud );
 
+
+	// --- Align Templates --- //
+	
 	// Find the best template alignment
 	TemplateAlignment::Result best_alignment;
 	std::cerr << "Finding best alignment" << std::endl;
@@ -547,6 +590,9 @@ void processFile()
 	std::cerr << "Best alignment index:  " << best_index << std::endl;
 	const FeatureCloud &best_template = object_templates[best_index];
 
+
+	// --- Report Best Match --- //
+	
 	// Print the alignment fitness score (values less than 0.00002 are good)
 	std::cerr << "Best fitness score: " << best_alignment.fitness_score << std::endl;
 
@@ -562,13 +608,16 @@ void processFile()
 	std::cerr << std::endl;
 	std::cerr << "t = < " << translation(0) << ", " << translation(1) << ", " << translation(2) << " >" << std::endl;
 
+
+	// --- Visualize --- //
+	
 	// Save the aligned template for visualization
 	pcl::PointCloud<pcl::PointXYZ> transformed_cloud;
 	pcl::transformPointCloud (*best_template.getPointCloud (), transformed_cloud, best_alignment.final_transformation);
 
 	std::vector< pcl::PointCloud<pcl::PointXYZ>::Ptr > clouds;
 	clouds.push_back(transformed_cloud.makeShared());
-	clouds.push_back(cloud);
+	clouds.push_back(filteredScene);
 	visualize(clouds);
 }
 
