@@ -1,0 +1,13 @@
+* Try nodelets
+  - Will this speed things up?
+
+* Need to try the process on an actual video stream
+  - Need to use it on an actual Kinect
+  - Could also take several new pictures and try it on those
+
+* Need to account for orientation noise
+  - Pitch and roll will be 0 (i.e. aligned with base_frame.  Only yaw will be different in reality.  Need to do some work to eliminate pitch and roll from SE(3) matrix.
+
+* Can I use fewer template cubes?
+
+* Need to put the template matching stuff into a ROS node.
