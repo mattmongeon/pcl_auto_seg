@@ -3,6 +3,7 @@
 
 #include <pcl/point_types.h>
 #include <vector>
+#include <utility>
 
 // A 3D cluster representing a salient region in the image.  This class is part
 // of the 
@@ -30,7 +31,7 @@ public:
      * Params:
      * pPoint - a pointer to the point to be added.
      */
-    void AddPoint(pcl::PointXYZ* pNewPoint, bool updateCentroidData=true);
+    void AddPoint(pcl::PointXYZ* pNewPoint, pcl::Normal* pNormal, bool updateCentroidData=true);
 
     /**
      * Adds a vector of new points to this cluster.
@@ -38,7 +39,8 @@ public:
      * Params:
      * points - A vector containing pointers to the new points.
      */
-    void AddPoints(std::vector<pcl::PointXYZ*> points, bool updateCentroidData=true);
+    void AddPoints(std::vector< std::pair<pcl::PointXYZ*, pcl::Normal*> > points,
+				   bool updateCentroidData=true);
 
     /**
      * Removes the point at the parameter (x,y,z) location from this cluster.
@@ -67,14 +69,15 @@ public:
      */
     void UpdateCentroidData();
 
-private:
+	
+public:
 
     //------------------------------------------------------------------------//
     //----------------------------  DATA MEMBERS  ----------------------------//
     //------------------------------------------------------------------------//
 
-    // Contains references to all of the points in this cluster.
-    std::vector<pcl::PointXYZ*> mPoints;
+    // Contains references to all of the points and their associated normals in this cluster.
+    std::vector< std::pair<pcl::PointXYZ*, pcl::Normal*> > mPoints;
 
     // The location in space of the centroid.  Corresponds to one of the points.
     float mX;
