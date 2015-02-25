@@ -223,27 +223,11 @@ std::cout << "Height of cube descriptors cloud:  " << mpCubeDescriptors->height 
 		//void CloudCallback(const sensor_msgs::PointCloud2ConstPtr& input)
 	void ProcessFile()
 	{
-		ros::Rate loop_rate(10);
-		
-		while(ros::ok())
-		{
-			mPub.publish(*mpCube);
-
-			ros::spinOnce();
-
-			loop_rate.sleep();
-		}
-
-		return;
-		
-		std::cout << "Processing saved file." << std::endl;
-
-		
         // --- Read Scene From File --- //
 
 		pcl::PointCloud<pcl::PointXYZ>::Ptr pScene( new pcl::PointCloud<pcl::PointXYZ>() );
 
-        if (pcl::io::loadPCDFile( "/home/mongeon/stuff_on_floor.pcd", *pScene ) < 0)
+        if (pcl::io::loadPCDFile( "/home/mongeon/medium_block_on_desk_90.pcd", *pScene ) < 0)
 		{
             std::cout << "Error loading scene cloud." << std::endl;
             return;
@@ -288,8 +272,6 @@ std::cout << "Size of keypoint cloud:  " << pSceneKeypoints->size() << std::endl
 std::cout << "Width of keypoint cloud:  " << pSceneKeypoints->width << std::endl;
 std::cout << "Height of keypoint cloud:  " << pSceneKeypoints->height << std::endl;
 
-
-return;
 
 		// --- Compute Descriptors for Keypoints --- //
 
