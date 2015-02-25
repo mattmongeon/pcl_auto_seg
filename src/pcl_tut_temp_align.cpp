@@ -166,7 +166,7 @@ public:
 			processInput ();
 		}
 
-	void make90Cube(float side_m)
+	void makeCube(float side_m)
 	{
 		// --- Define Constants --- //
 
@@ -240,70 +240,6 @@ public:
 			}
 		}
 
-
-		// --- Add It To The Library --- //
-
-		setInputCloud(model);
-	}
-
-	void makeAlignedCube(float side_m)
-	{
-		// --- Define Constants --- //
-
-		float cubeShortSide = side_m;  // Horizontal side length (m)
-		float cubeLongSide = side_m;   // vertical side length (m)
-
-		// How many points on a long side (esitmate) for making test cubes, either
-		// for ICP registration or for testing fit_planes.cpp
-		const int nLongSideHighRes = 15;
-		const int nShortSideHighRes = 15;
-
-	
-		// --- Generate Cube Model Point Cloud --- //
-
-		int npointsBottomFace = nShortSideHighRes * nShortSideHighRes;
-		int npointsSideFace = nShortSideHighRes * nLongSideHighRes;
-		int npointsTotal = npointsBottomFace + npointsSideFace;
-	
-		float dxShortSide = cubeShortSide / (float)nShortSideHighRes;
-		float dxLongSide =  cubeLongSide /  (float)nLongSideHighRes;
-	
-		pcl::PointCloud<pcl::PointXYZ>::Ptr model( new pcl::PointCloud<pcl::PointXYZ>() );
-		model->width = npointsTotal;
-		model->height = 1;
-	
-		// make the top and bottom cap faces
-		// these go at y = +- cubeLongSide /2 
-		// from x,z = -ls/2, -ls/2  to x,z = ls/2, ls/2
-		int counter = 0;
-		float xval, yval, zval;
-		float xOffset, yOffset, zOffset;
-	
-		yval = -cubeLongSide / 2;
-		xOffset = -cubeShortSide / 2;
-		zOffset = -cubeShortSide / 2;
-		for(int i = 0; i < nShortSideHighRes; i++){
-			for(int j = 0; j < nShortSideHighRes; j++){
-				model->points.push_back(pcl::PointXYZ());
-				model->points[counter].x = i*dxShortSide + xOffset;
-				model->points[counter].y = yval;
-				model->points[counter].z = j*dxShortSide + zOffset;
-				counter++;
-			}
-		}
-
-		zval = -cubeShortSide / 2;
-		xOffset = - cubeShortSide / 2;
-		yOffset = - cubeLongSide / 2;
-		for(int i = 0; i < nShortSideHighRes; i++){
-			for(int j = 0; j < nLongSideHighRes; j++){
-				model->points.push_back(pcl::PointXYZ());
-				model->points[counter].x = i*dxShortSide + xOffset;
-				model->points[counter].y = j*dxLongSide + yOffset;
-				model->points[counter].z = zval;
-				counter++;
-			}
-		}
 
 		// --- Add It To The Library --- //
 
@@ -493,76 +429,30 @@ void processFile()
 
 	FeatureCloud template_cloud1;
 	std::cerr << "Cube size 0.03" << std::endl;
-	template_cloud1.make90Cube(0.03);
+	template_cloud1.makeCube(0.03);
 	object_templates.push_back(template_cloud1);
 
-	// FeatureCloud template_cloud2;
-	// std::cerr << "Cube size 0.035" << std::endl;
-	// template_cloud2.make90Cube(0.035);
-	// object_templates.push_back(template_cloud2);
-
+	FeatureCloud template_cloud2;
+	std::cerr << "Cube size 0.04" << std::endl;
+	template_cloud2.makeCube(0.04);
+	object_templates.push_back(template_cloud2);
+	
 	FeatureCloud template_cloud3;
-	std::cerr << "Cube size 0.04" << std::endl;
-	template_cloud3.make90Cube(0.04);
-	object_templates.push_back(template_cloud3);
-	
-	FeatureCloud template_cloud4;
 	std::cerr << "Cube size 0.045" << std::endl;
-	template_cloud4.make90Cube(0.045);
-	object_templates.push_back(template_cloud4);
+	template_cloud3.makeCube(0.045);
+	object_templates.push_back(template_cloud3);
 
-	FeatureCloud template_cloud5;
+	FeatureCloud template_cloud4;
 	std::cerr << "Cube size 0.05" << std::endl;
-	template_cloud5.make90Cube(0.05);
-	object_templates.push_back(template_cloud5);
+	template_cloud4.makeCube(0.05);
+	object_templates.push_back(template_cloud4);
 
-	FeatureCloud template_cloud6;
+	FeatureCloud template_cloud5;
 	std::cerr << "Cube size 0.055" << std::endl;
-	template_cloud6.make90Cube(0.055);
-	object_templates.push_back(template_cloud6);
-	
-	/*
-	FeatureCloud template_cloud4;
-	std::cerr << "Cube size 0.025" << std::endl;
-	template_cloud4.makeAlignedCube(0.025);
-	object_templates.push_back(template_cloud4);
-
-	FeatureCloud template_cloud5;
-	std::cerr << "Cube size 0.04" << std::endl;
-	template_cloud5.makeAlignedCube(0.04);
+	template_cloud5.makeCube(0.055);
 	object_templates.push_back(template_cloud5);
+
 	
-	FeatureCloud template_cloud6;
-	std::cerr << "Cube size 0.051" << std::endl;
-	template_cloud6.makeAlignedCube(0.051);
-	object_templates.push_back(template_cloud6);
-
-	FeatureCloud template_cloud4;
-	std::cerr << "Cube size 0.075" << std::endl;
-	template_cloud4.makeCube(0.075);
-	object_templates.push_back(template_cloud4);
-
-	FeatureCloud template_cloud5;
-	std::cerr << "Cube size 0.15" << std::endl;
-	template_cloud5.makeCube(0.15);
-	object_templates.push_back(template_cloud5);
-	
-	FeatureCloud template_cloud6;
-	std::cerr << "Cube size 0.2" << std::endl;
-	template_cloud6.makeCube(0.2);
-	object_templates.push_back(template_cloud6);
-
-	FeatureCloud template_cloud7;
-	std::cerr << "Cube size 0.25" << std::endl;
-	template_cloud7.makeCube(0.25);
-	object_templates.push_back(template_cloud7);
-
-	FeatureCloud template_cloud8;
-	std::cerr << "Cube size 0.3" << std::endl;
-	template_cloud8.makeCube(0.3);
-	object_templates.push_back(template_cloud8);
-	*/
-
 	//--- Load the target cloud PCD file --- //
 	
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
@@ -582,20 +472,6 @@ void processFile()
 	pass.filter (*cloud);
 
 
-	/*
-	// --- Downsample Cloud --- //
-
-	// ... and downsampling the point cloud
-	const float voxel_grid_size = 0.005f;
-	pcl::VoxelGrid<pcl::PointXYZ> vox_grid;
-	vox_grid.setInputCloud (cloud);
-	vox_grid.setLeafSize (voxel_grid_size, voxel_grid_size, voxel_grid_size);
-	//vox_grid.filter (*cloud); // Please see this http://www.pcl-developers.org/Possible-problem-in-new-VoxelGrid-implementation-from-PCL-1-5-0-td5490361.html
-	pcl::PointCloud<pcl::PointXYZ>::Ptr tempCloud (new pcl::PointCloud<pcl::PointXYZ>); 
-	vox_grid.filter (*tempCloud);
-	cloud = tempCloud;
-	*/
-	
 	// --- Calculate Scene Normals --- //
 
 	std::cerr << "Computing scene normals" << std::endl;
@@ -649,26 +525,8 @@ void processFile()
 	extract_normals.setInputCloud( pSceneNormals );
 	extract_normals.setIndices( inliers_plane );
 	extract_normals.filter( *filteredSceneNormals );	
+
 	
-	/*
-	// --- Smooth Surfaces --- //
-
-	// Borrowed from tutorial "Smoothing and normal estimation based on polynomial reconstruction"
-	std::cerr << "Smoothing surfaces" << std::endl;
-	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree( new pcl::search::KdTree<pcl::PointXYZ>() );
-	pcl::PointCloud<pcl::PointNormal> mls_points;
-	pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
-	mls.setComputeNormals(true);
-	mls.setInputCloud(filteredScene);
-	mls.setPolynomialFit(true);
-	mls.setSearchMethod(tree);
-	mls.setSearchRadius(0.03);
-	mls.process(mls_points);
-	pcl::PointCloud<pcl::PointXYZ>::Ptr pts( new pcl::PointCloud<pcl::PointXYZ>() );
-	copyPointCloud(mls_points, *pts);
-	filteredScene = pts;
-	*/
-
 	// --- Set Our Target Cloud --- //
 	
 	// Assign to the target FeatureCloud
