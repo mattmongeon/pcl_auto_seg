@@ -86,6 +86,12 @@
 #include <utility>
 #include <sstream>
 
+#include <geometry_msgs/Pose.h>
+#include <tf/LinearMath/Quaternion.h>
+#include <tf/LinearMath/Vector3.h>
+#include <tf/LinearMath/Matrix3x3.h>
+
+
 
 ros::Publisher pub;
 pcl::PointCloud<pcl::PointXYZ>::Ptr pCube;
@@ -456,7 +462,7 @@ void processFile()
 	//--- Load the target cloud PCD file --- //
 	
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
-	pcl::io::loadPCDFile( "/home/mongeon/medium_block_on_desk_align.pcd", *cloud );
+	pcl::io::loadPCDFile( "/home/mongeon/block_on_floor.pcd", *cloud );
 
 
 	// --- Z-Filter And Downsample Cloud --- //
@@ -468,7 +474,7 @@ void processFile()
 	pcl::PassThrough<pcl::PointXYZ> pass;
 	pass.setInputCloud (cloud);
 	pass.setFilterFieldName ("z");
-	pass.setFilterLimits (0, 1.0);
+	pass.setFilterLimits (0, 1.5);
 	pass.filter (*cloud);
 
 
@@ -576,6 +582,30 @@ void processFile()
 	std::cerr << "t = < " << translation(0) << ", " << translation(1) << ", " << translation(2) << " >" << std::endl;
 
 
+	// --- Publish --- //
+
+	// TODO:  Clean up this part.
+    geometry_msgs::Pose pose;
+
+	tf::Matrix3x3 rot( rotation(0,0), rotation(0,1), rotation(0,2),
+					   rotation(1,0), rotation(1,1), rotation(1,2),
+					   rotation(2,0), rotation(2,1), rotation(2,2) );
+	tf::Quaternion q;
+	rot.getRotation(q);
+	pose.orientation.w = q.getW();
+	pose.orientation.x = q.getX();
+	pose.orientation.y = q.getY();
+	pose.orientation.z = q.getZ();
+
+	tf::Vector3 t( translation(0), translation(1), translation(2) );
+	pose.position.x = t.getX();
+	pose.position.y = t.getY();
+	pose.position.z = t.getZ();
+	
+	std::cerr << "Publishing" << std::endl;
+	pub.publish(pose);
+	
+
 	// --- Visualize --- //
 	
 	// Save the aligned template for visualization
@@ -595,12 +625,12 @@ int main(int argc, char** argv)
     ros::init (argc, argv, "pcl_node");
     ros::NodeHandle nh;
 	
+    // Create a ROS publisher for the pose of the block relative to the ASUS.
+    pub = nh.advertise<geometry_msgs::Pose>("/block_pose", 1);
+
     // Create a ROS subscriber for the input point cloud
     //ros::Subscriber sub = nh.subscribe ("camera/depth_registered/points", 1, cloud_cb);
 	processFile();
-
-    // Create a ROS publisher for the output point cloud
-    pub = nh.advertise<sensor_msgs::PointCloud2> ("output", 1);
 
     // Spin
     ros::spin();
