@@ -19,6 +19,7 @@ void visualize(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud)
 	visualizer_o_Ptr->setSize(640, 480);
 	visualizer_o_Ptr->setPosition(640, 0);
 	visualizer_o_Ptr->setBackgroundColor(0x00, 0x00, 0x00);
+	visualizer_o_Ptr->addCoordinateSystem(1.0);
 	visualizer_o_Ptr->initCameraParameters();
 	visualizer_o_Ptr->addPointCloud(pCloud, "cloud");
 
