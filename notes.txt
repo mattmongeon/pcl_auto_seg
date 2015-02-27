@@ -10,10 +10,11 @@
 
 * Can I use fewer template cubes?
 
-* Need to put the template matching stuff into a ROS node.
-
-* How to use the transformation information?
-  - The transformation info will be from the origin of the ASUS to the box.
-  - Can get transformation from base_link to gripper_palm_link from tf.
-  - Can measure from the gripper palm's frame to the center of the ASUS to generate a transformation matrix.
-  - Then getting the transformation matrix from the block to the base_link is as simple as chaining the matrices.
+Next Steps:
+----------
+- Run the matching with an ASUS connected
+  * Set up a single block and try doing the matching.
+  * Keep it running in real-time and print out the results.
+  * Try nodelets and see if those will help.
+- Test the code on the youBot
+  * Run the ROS node on the youBot with the arm in the proper position and print the results.
