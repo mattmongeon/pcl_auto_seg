@@ -284,7 +284,6 @@ protected:
     // Compute the surface normals
     void computeSurfaceNormals ()
 	{
-		std::cerr << "ComputeSurfaceNormals()" << std::endl;
 		normals_ = SurfaceNormals::Ptr (new SurfaceNormals);
 
 		pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> norm_est;
@@ -298,7 +297,6 @@ protected:
     void
     computeLocalFeatures ()
 		{
-			std::cerr << "ComputeLocalFeatures()" << std::endl;
 			features_ = LocalFeatures::Ptr (new LocalFeatures);
 
 			pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfh_est;
@@ -434,27 +432,22 @@ void processFile()
 	object_templates.clear();
 
 	FeatureCloud template_cloud1;
-	std::cerr << "Cube size 0.03" << std::endl;
 	template_cloud1.makeCube(0.03);
 	object_templates.push_back(template_cloud1);
 
 	FeatureCloud template_cloud2;
-	std::cerr << "Cube size 0.04" << std::endl;
 	template_cloud2.makeCube(0.04);
 	object_templates.push_back(template_cloud2);
 	
 	FeatureCloud template_cloud3;
-	std::cerr << "Cube size 0.045" << std::endl;
 	template_cloud3.makeCube(0.045);
 	object_templates.push_back(template_cloud3);
 
 	FeatureCloud template_cloud4;
-	std::cerr << "Cube size 0.05" << std::endl;
 	template_cloud4.makeCube(0.05);
 	object_templates.push_back(template_cloud4);
 
 	FeatureCloud template_cloud5;
-	std::cerr << "Cube size 0.055" << std::endl;
 	template_cloud5.makeCube(0.055);
 	object_templates.push_back(template_cloud5);
 
@@ -467,7 +460,6 @@ void processFile()
 
 	// --- Z-Filter And Downsample Cloud --- //
 	
-	std::cerr << "Preprocessing cloud" << std::endl;
 	// Preprocess the cloud by...
 	// ...removing distant points
 	const float depth_limit = 1.5;
@@ -480,7 +472,6 @@ void processFile()
 
 	// --- Calculate Scene Normals --- //
 
-	std::cerr << "Computing scene normals" << std::endl;
 	pcl::PointCloud<pcl::Normal>::Ptr pSceneNormals( new pcl::PointCloud<pcl::Normal>() );
 	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normEst;
 	normEst.setKSearch(10);
@@ -493,7 +484,6 @@ void processFile()
 	pcl::PointIndices::Ptr inliers_plane( new pcl::PointIndices );
 	pcl::ModelCoefficients::Ptr coefficients_plane( new pcl::ModelCoefficients );
 
-	std::cerr << "Segmenting the table" << std::endl;
 	pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> seg1; 
 	seg1.setOptimizeCoefficients( true );
 	seg1.setModelType( pcl::SACMODEL_NORMAL_PLANE );
@@ -505,17 +495,14 @@ void processFile()
 	seg1.setInputNormals( pSceneNormals );
 	// Obtain the plane inliers and coefficients
 	seg1.segment( *inliers_plane, *coefficients_plane );
-	//std::cerr << "Plane coefficients: " << *coefficients_plane << std::endl;
 
 	// Extract the planar inliers from the input cloud
-	std::cerr << "Extracting planar inliers" << std::endl;
 	pcl::ExtractIndices<pcl::PointXYZ> extract;
 	extract.setInputCloud( cloud );
 	extract.setIndices( inliers_plane );
 	extract.setNegative( false );
 
 	// Write the planar inliers to disk
-	std::cerr << "Filtering out the plane" << std::endl;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane( new pcl::PointCloud<pcl::PointXYZ> );
 	extract.filter( *cloud_plane );
 
@@ -524,7 +511,6 @@ void processFile()
 	extract.setNegative( true );
 	extract.filter( *filteredScene );
 
-	std::cerr << "removing normals" << std::endl;
 	pcl::ExtractIndices<pcl::Normal> extract_normals;
 	pcl::PointCloud<pcl::Normal>::Ptr filteredSceneNormals( new pcl::PointCloud<pcl::Normal> );
 	extract_normals.setNegative( true );
@@ -537,20 +523,16 @@ void processFile()
 	
 	// Assign to the target FeatureCloud
 	FeatureCloud target_cloud;
-	std::cerr << "Setting intput cloud for target FeatureCloud" << std::endl;
 	target_cloud.setInputCloud(filteredScene);
 
 
 	// --- Set Up Template Container --- //
 	
 	TemplateAlignment template_align;
-	std::cerr << "Entering loop for adding template cloud" << std::endl;
 	for (size_t i = 0; i < object_templates.size (); ++i)
 	{
-		std::cerr << "\tAdding cloud " << i << std::endl;
 		template_align.addTemplateCloud (object_templates[i]);
 	}
-	std::cerr << "Setting target cloud for the TemplateAlignment object" << std::endl;
 	template_align.setTargetCloud( target_cloud );
 
 
@@ -558,7 +540,6 @@ void processFile()
 	
 	// Find the best template alignment
 	TemplateAlignment::Result best_alignment;
-	std::cerr << "Finding best alignment" << std::endl;
 	int best_index = template_align.findBestAlignment (best_alignment);
 	std::cerr << "Best alignment index:  " << best_index << std::endl;
 	const FeatureCloud &best_template = object_templates[best_index];
