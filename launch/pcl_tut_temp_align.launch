@@ -4,7 +4,7 @@
 		<arg name="depth_registration" value="true"/>
 	</include>
 	-->
-	<node name="pcl_tut_temp_align" pkg="pcl_auto_seg" type="pcl_tut_temp_align" />
+	<node name="pcl_tut_temp_align" pkg="pcl_auto_seg" type="pcl_tut_temp_align" output="screen"/>
 	<!--node name="rviz" pkg="rviz" type="rviz" args="-d $(find pcl_auto_seg)/viz.rviz" /-->
 </launch>
 
