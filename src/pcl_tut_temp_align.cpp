@@ -49,8 +49,6 @@
 
 #include <boost/thread/thread.hpp>
 
-#include <pcl/recognition/ransac_based/obj_rec_ransac.h>
-
 
 // --- From Template Matching --- //
 
