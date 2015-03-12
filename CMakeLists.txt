@@ -107,10 +107,7 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(pcl_auto_seg src/pcl_auto_seg.cpp src/segmenter/salient_region.cpp)
 add_executable(save_pt_cloud src/save_pt_cloud.cpp)
-add_executable(pcl_template_match src/pcl_template_match.cpp)
-add_executable(pcl_scratch src/pcl_scratch.cpp)
 add_executable(view_pt_cloud_file src/view_pt_cloud_file.cpp)
 add_executable(pcl_tut_temp_align src/pcl_tut_temp_align.cpp)
 add_executable(seg_block src/seg_block.cpp)
@@ -120,22 +117,8 @@ add_executable(seg_block src/seg_block.cpp)
 # add_dependencies(pcl_auto_seg_node pcl_auto_seg_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(pcl_auto_seg
-  ${catkin_LIBRARIES}
-)
-
 target_link_libraries(save_pt_cloud
   ${catkin_LIBRARIES}
-)
-
-target_link_libraries(pcl_template_match
-  ${catkin_LIBRARIES}
-)
-
-target_link_libraries(pcl_scratch
-  ${catkin_LIBRARIES}
-  libvtkCommon.so
-  libvtkFiltering.so
 )
 
 target_link_libraries(view_pt_cloud_file
