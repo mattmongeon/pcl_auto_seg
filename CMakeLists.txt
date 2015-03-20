@@ -99,6 +99,7 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  include
 )
 
 ## Declare a cpp library
@@ -110,7 +111,10 @@ include_directories(
 add_executable(save_pt_cloud src/save_pt_cloud.cpp)
 add_executable(view_pt_cloud_file src/view_pt_cloud_file.cpp)
 add_executable(pcl_tut_temp_align src/pcl_tut_temp_align.cpp)
-add_executable(seg_block src/seg_block.cpp)
+add_executable(seg_block 
+  src/seg_block.cpp
+  src/template_alignment.cpp
+  src/feature_cloud.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
