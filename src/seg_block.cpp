@@ -20,6 +20,10 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/registration/ia_ransac.h>
 #include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/visualization/pcl_visualizer.h>
+
+#include "pcl_auto_seg/feature_cloud.h"
+#include "pcl_auto_seg/template_alignment.h"
 
 #include <vector>
 #include <iostream>
@@ -28,17 +32,15 @@
 // --- Declarations --- //
 
 ros::Publisher pub;
-pcl::PointCloud<pcl::PointXYZ>::Ptr pCube;
-pcl::PointCloud<pcl::Normal>::Ptr pCubeNormals;
-pcl::PointCloud<pcl::Normal>::Ptr pSceneNormals;
+pcl::visualization::PCLVisualizer::Ptr visualizer_o_Ptr;
 
 typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudPtr;
 typedef pcl::PointCloud<pcl::Normal>::Ptr NormalCloudPtr;
 typedef std::pair<PointCloudPtr, NormalCloudPtr> ModelPair;
 std::vector<ModelPair> models;
 
-class FeatureCloud;
 std::vector<FeatureCloud> object_templates;
+TemplateAlignment template_align;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -46,315 +48,46 @@ std::vector<FeatureCloud> object_templates;
 // for purposes particular to this project.
 ////////////////////////////////////////////////////////////////////////////////
 
-
-class FeatureCloud
+void visualize(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud, pcl::visualization::PCLVisualizer::Ptr pVisualizer)
 {
-public:
-    // A bit of shorthand
-    typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
-    typedef pcl::PointCloud<pcl::Normal> SurfaceNormals;
-    typedef pcl::PointCloud<pcl::FPFHSignature33> LocalFeatures;
-    typedef pcl::search::KdTree<pcl::PointXYZ> SearchMethod;
+    //init visualizer
+	pVisualizer->setSize(640, 480);
+	pVisualizer->setPosition(640, 0);
+	pVisualizer->setBackgroundColor(0x00, 0x00, 0x00);
+	pVisualizer->initCameraParameters();
+	pVisualizer->addPointCloud(pCloud, "cloud");
 
-    FeatureCloud () :
-		search_method_xyz_ (new SearchMethod),
-		normal_radius_ (0.02f),
-		feature_radius_ (0.02f)
-		{}
-
-    ~FeatureCloud () {}
-
-    // Process the given cloud
-    void setInputCloud (PointCloud::Ptr xyz)
-		{
-			xyz_ = xyz;
-			processInput ();
-		}
-
-    // Load and process the cloud in the given PCD file
-    void
-    loadInputCloud (const std::string &pcd_file)
-		{
-			xyz_ = PointCloud::Ptr (new PointCloud);
-			pcl::io::loadPCDFile (pcd_file, *xyz_);
-			processInput ();
-		}
-
-	void makeCube(float side_m)
-	{
-		// --- Define Constants --- //
-
-		float cubeShortSide = side_m;  // Horizontal side length (m)
-		float cubeLongSide = side_m;   // vertical side length (m)
-
-		// How many points on a long side (esitmate) for making test cubes, either
-		// for ICP registration or for testing fit_planes.cpp
-		const int nLongSideHighRes = 15;
-		const int nShortSideHighRes = 15;
-
-	
-		// --- Generate Cube Model Point Cloud --- //
-
-		int npointsBottomFace = nShortSideHighRes * nShortSideHighRes;
-		int npointsSideFace = nShortSideHighRes * nLongSideHighRes;
-		int npointsTotal = npointsBottomFace + 2*npointsSideFace;
-	
-		float dxShortSide = cubeShortSide / (float)nShortSideHighRes;
-		float dxLongSide =  cubeLongSide /  (float)nLongSideHighRes;
-	
-		pcl::PointCloud<pcl::PointXYZ>::Ptr model( new pcl::PointCloud<pcl::PointXYZ>() );
-		model->width = npointsTotal;
-		model->height = 1;
-	
-		// make the top and bottom cap faces
-		// these go at y = +- cubeLongSide /2 
-		// from x,z = -ls/2, -ls/2  to x,z = ls/2, ls/2
-		int counter = 0;
-		float xval, yval, zval;
-		float xOffset, yOffset, zOffset;
-	
-		// bottom face
-		yval = -cubeLongSide / 2;
-		xOffset = -cubeShortSide / 2;
-		zOffset = -cubeShortSide / 2;
-		for(int i = 0; i < nShortSideHighRes; i++){
-			for(int j = 0; j < nShortSideHighRes; j++){
-				model->points.push_back(pcl::PointXYZ());
-				model->points[counter].x = i*dxShortSide + xOffset;
-				model->points[counter].y = yval;
-				model->points[counter].z = j*dxShortSide + zOffset;
-				counter++;
-			}
-		}
-
-
-		zval = -cubeShortSide / 2;
-		xOffset = - cubeShortSide / 2;
-		yOffset = - cubeLongSide / 2;
-		for(int i = 0; i < nShortSideHighRes; i++){
-			for(int j = 0; j < nLongSideHighRes; j++){
-				model->points.push_back(pcl::PointXYZ());
-				model->points[counter].x = i*dxShortSide + xOffset;
-				model->points[counter].y = j*dxLongSide + yOffset;
-				model->points[counter].z = zval;
-				counter++;
-			}
-		}
-
-		xval = cubeShortSide / 2;
-		zOffset = -cubeShortSide / 2;
-		yOffset = - cubeLongSide / 2;
-		for(int i = 0; i < nShortSideHighRes; i++){
-			for(int j = 0; j < nLongSideHighRes; j++){
-				model->points.push_back(pcl::PointXYZ());
-				model->points[counter].x = xval;
-				model->points[counter].y = j*dxLongSide + yOffset;
-				model->points[counter].z = i*dxShortSide + zOffset;
-				counter++;
-			}
-		}
-
-
-		// --- Add It To The Library --- //
-
-		setInputCloud(model);
-	}
-
-    // Get a pointer to the cloud 3D points
-    PointCloud::Ptr
-    getPointCloud () const
-		{
-			return (xyz_);
-		}
-
-    // Get a pointer to the cloud of 3D surface normals
-    SurfaceNormals::Ptr
-    getSurfaceNormals () const
-	{
-		return (normals_);
-	}
-
-    // Get a pointer to the cloud of feature descriptors
-    LocalFeatures::Ptr
-    getLocalFeatures () const
-	{
-		return (features_);
-	}
-
-protected:
-    // Compute the surface normals and local features
-    void processInput()
-	{
-		computeSurfaceNormals();
-		computeLocalFeatures();
-	}
-
-    // Compute the surface normals
-    void computeSurfaceNormals ()
-	{
-		normals_ = SurfaceNormals::Ptr (new SurfaceNormals);
-
-		pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> norm_est;
-		norm_est.setInputCloud (xyz_);
-		norm_est.setSearchMethod (search_method_xyz_);
-		norm_est.setRadiusSearch (normal_radius_);
-		norm_est.compute (*normals_);
-	}
-
-    // Compute the local feature descriptors
-    void
-    computeLocalFeatures ()
-		{
-			features_ = LocalFeatures::Ptr (new LocalFeatures);
-
-			pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfh_est;
-			fpfh_est.setInputCloud (xyz_);
-			fpfh_est.setInputNormals (normals_);
-			fpfh_est.setSearchMethod (search_method_xyz_);
-			fpfh_est.setRadiusSearch (feature_radius_);
-			fpfh_est.compute (*features_);
-		}
-
-private:
-    // Point cloud data
-    PointCloud::Ptr xyz_;
-    SurfaceNormals::Ptr normals_;
-    LocalFeatures::Ptr features_;
-    SearchMethod::Ptr search_method_xyz_;
-
-    // Parameters
-    float normal_radius_;
-    float feature_radius_;
-};
-
-
-class TemplateAlignment
-{
-public:
-
-    // A struct for storing alignment results
-    struct Result
-    {
-		float fitness_score;
-		Eigen::Matrix4f final_transformation;
-		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    };
-
-    TemplateAlignment () :
-		min_sample_distance_ (0.05f),
-		max_correspondence_distance_ (0.01f*0.01f),
-		nr_iterations_ (500)
-		{
-			// Intialize the parameters in the Sample Consensus Intial Alignment (SAC-IA) algorithm
-			sac_ia_.setMinSampleDistance (min_sample_distance_);
-			sac_ia_.setMaxCorrespondenceDistance (max_correspondence_distance_);
-			sac_ia_.setMaximumIterations (nr_iterations_);
-		}
-
-    ~TemplateAlignment () {}
-
-    // Set the given cloud as the target to which the templates will be aligned
-    void
-    setTargetCloud (FeatureCloud &target_cloud)
-		{
-			target_ = target_cloud;
-			sac_ia_.setInputTarget (target_cloud.getPointCloud ());
-			sac_ia_.setTargetFeatures (target_cloud.getLocalFeatures ());
-		}
-
-    // Add the given cloud to the list of template clouds
-    void
-    addTemplateCloud (FeatureCloud &template_cloud)
-		{
-			templates_.push_back (template_cloud);
-		}
-
-    // Align the given template cloud to the target specified by setTargetCloud ()
-    void
-    align (FeatureCloud &template_cloud, TemplateAlignment::Result &result)
-		{
-			sac_ia_.setInputCloud (template_cloud.getPointCloud ());
-			sac_ia_.setSourceFeatures (template_cloud.getLocalFeatures ());
-
-			pcl::PointCloud<pcl::PointXYZ> registration_output;
-			sac_ia_.align (registration_output);
-
-			result.fitness_score = (float) sac_ia_.getFitnessScore (max_correspondence_distance_);
-			result.final_transformation = sac_ia_.getFinalTransformation ();
-		}
-
-    // Align all of template clouds set by addTemplateCloud to the target specified by setTargetCloud ()
-    void
-    alignAll (std::vector<TemplateAlignment::Result, Eigen::aligned_allocator<Result> > &results)
-		{
-			results.resize (templates_.size ());
-			for (size_t i = 0; i < templates_.size (); ++i)
-			{
-				align (templates_[i], results[i]);
-			}
-		}
-
-    // Align all of template clouds to the target cloud to find the one with best alignment score
-    int
-    findBestAlignment (TemplateAlignment::Result &result)
-		{
-			// Align all of the templates to the target cloud
-			std::vector<Result, Eigen::aligned_allocator<Result> > results;
-			alignAll (results);
-
-			// Find the template with the best (lowest) fitness score
-			float lowest_score = std::numeric_limits<float>::infinity ();
-			int best_template = 0;
-			for (size_t i = 0; i < results.size (); ++i)
-			{
-				const Result &r = results[i];
-				if (r.fitness_score < lowest_score)
-				{
-					lowest_score = r.fitness_score;
-					best_template = (int) i;
-				}
-			}
-
-			// Output the best alignment
-			result = results[best_template];
-			return (best_template);
-		}
-
-private:
-    // A list of template clouds and the target to which they will be aligned
-    std::vector<FeatureCloud> templates_;
-    FeatureCloud target_;
-
-    // The Sample Consensus Initial Alignment (SAC-IA) registration routine and its parameters
-    pcl::SampleConsensusInitialAlignment<pcl::PointXYZ, pcl::PointXYZ, pcl::FPFHSignature33> sac_ia_;
-    float min_sample_distance_;
-    float max_correspondence_distance_;
-    int nr_iterations_;
-};
+	//reload visualizer content
+	pVisualizer->spinOnce(1);
+}
 
 
 // Align a collection of object templates to a sample point cloud
 void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 {
-    //--- Load the target cloud PCD file --- //
-	
-	// We are simply going to save a point cloud to file for now.
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::fromROSMsg(*input, *cloud);
+	std::cout << "Received point cloud" << std::endl;
+    //--- Convert Incoming Cloud --- //
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud( new pcl::PointCloud<pcl::PointXYZ> );
+    pcl::fromROSMsg( *input, *cloud );
 
 	
 	// --- Z-Filter And Downsample Cloud --- //
-	
-	// Preprocess the cloud by...
-	// ...removing distant points
+
+	// Preprocess the cloud by removing distant points
 	const float depth_limit = 1.5;
 	pcl::PassThrough<pcl::PointXYZ> pass;
-	pass.setInputCloud (cloud);
-	pass.setFilterFieldName ("z");
-	pass.setFilterLimits (0, 1.5);
-	pass.filter (*cloud);
+	pass.setInputCloud( cloud );
+	pass.setFilterFieldName( "z" );
+	pass.setFilterLimits( 0, 1.5 );
+	pass.filter( *cloud );
 
+	// It is possible to not have any points after z-filtering (ex. if we are looking up).
+	// Just bail if there is nothing left.
+	if( cloud->points.size() == 0 )
+		return;
 
+	
 	// --- Calculate Scene Normals --- //
 
 	pcl::PointCloud<pcl::Normal>::Ptr pSceneNormals( new pcl::PointCloud<pcl::Normal>() );
@@ -405,27 +138,28 @@ void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 
 	
 	// --- Set Our Target Cloud --- //
-	
+
 	// Assign to the target FeatureCloud
 	FeatureCloud target_cloud;
-	target_cloud.setInputCloud(filteredScene);
+	target_cloud.setInputCloud( filteredScene );
 
 
-	// --- Set Up Template Container --- //
+	// --- Visualize the Filtered Cloud --- //
+
+	//visualize( filteredScene, visualizer_o_Ptr );
+
+
+	// --- Set Input Cloud For Alignment --- //
 	
-	TemplateAlignment template_align;
-	for (size_t i = 0; i < object_templates.size (); ++i)
-	{
-		template_align.addTemplateCloud (object_templates[i]);
-	}
 	template_align.setTargetCloud( target_cloud );
-
+	
 
 	// --- Align Templates --- //
-	
+
+	std::cout << "Searching for best fit" << std::endl;
 	// Find the best template alignment
 	TemplateAlignment::Result best_alignment;
-	int best_index = template_align.findBestAlignment (best_alignment);
+	int best_index = template_align.findBestAlignment( best_alignment );
 	std::cerr << "Best alignment index:  " << best_index << std::endl;
 	const FeatureCloud &best_template = object_templates[best_index];
 
@@ -479,6 +213,8 @@ int main(int argc, char** argv)
     ros::init (argc, argv, "seg_block");
     ros::NodeHandle nh;
 
+	// --- Set Up Template Container --- //
+	
 	// Load the object templates specified in the object_templates.txt file
 	object_templates.clear();
 
@@ -502,6 +238,14 @@ int main(int argc, char** argv)
 	template_cloud5.makeCube(0.055);
 	object_templates.push_back(template_cloud5);
 
+	for (size_t i = 0; i < object_templates.size (); ++i)
+	{
+		template_align.addTemplateCloud (object_templates[i]);
+	}
+
+	
+	// Create visualizer
+	//visualizer_o_Ptr = pcl::visualization::PCLVisualizer::Ptr(new pcl::visualization::PCLVisualizer());
 	
     // Create a ROS publisher for the pose of the block relative to the ASUS.
     pub = nh.advertise<geometry_msgs::Pose>("/block_pose", 1);
