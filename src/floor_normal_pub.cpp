@@ -104,7 +104,8 @@ void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 	floorNorm.y = coefficients_plane->values[1];
 	floorNorm.z = coefficients_plane->values[2];
 	
-	std::cerr << "Publishing floor normal" << std::endl;
+	std::cout << "Publishing floor normal" << std::endl;
+	std::cout << std::endl;
 	pub.publish(floorNorm);
 }
 
