@@ -97,7 +97,7 @@ void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 	normEst.compute( *pSceneNormals );
 
 
-	// --- Get Rid Of Table --- //
+	// --- Get Rid Of Floor --- //
 
 	pcl::PointIndices::Ptr inliers_plane( new pcl::PointIndices );
 	pcl::ModelCoefficients::Ptr coefficients_plane( new pcl::ModelCoefficients );
