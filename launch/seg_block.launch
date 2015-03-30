@@ -6,5 +6,7 @@
 
 	<node name="seg_block" pkg="pcl_auto_seg" type="seg_block" output="screen"/>
 
+	<node name="floor_normal_pub" pkg="pcl_auto_seg" type="floor_normal_pub" output="screen"/>
+
 </launch>
 

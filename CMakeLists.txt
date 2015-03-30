@@ -115,6 +115,7 @@ add_executable(seg_block
   src/seg_block.cpp
   src/template_alignment.cpp
   src/feature_cloud.cpp)
+add_executable(floor_normal_pub src/floor_normal_pub.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -138,6 +139,12 @@ target_link_libraries(pcl_tut_temp_align
 )
 
 target_link_libraries(seg_block
+  ${catkin_LIBRARIES}
+  libvtkCommon.so
+  libvtkFiltering.so
+)
+
+target_link_libraries(floor_normal_pub
   ${catkin_LIBRARIES}
   libvtkCommon.so
   libvtkFiltering.so
