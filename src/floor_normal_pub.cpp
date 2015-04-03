@@ -29,15 +29,29 @@
 // --- Declarations --- //
 
 ros::Publisher pub;
+pcl::visualization::PCLVisualizer::Ptr visualizer_o_Ptr;
 
 typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudPtr;
 typedef pcl::PointCloud<pcl::Normal>::Ptr NormalCloudPtr;
 
 
+void visualize(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud, pcl::visualization::PCLVisualizer::Ptr pVisualizer)
+{
+    //init visualizer
+	pVisualizer->setSize(640, 480);
+	pVisualizer->setPosition(640, 0);
+	pVisualizer->setBackgroundColor(0x00, 0x00, 0x00);
+	pVisualizer->initCameraParameters();
+	pVisualizer->addPointCloud(pCloud, "cloud");
+
+	//reload visualizer content
+	pVisualizer->spinOnce(1);
+}
+
+
 // Align a collection of object templates to a sample point cloud
 void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 {
-	std::cout << "Received point cloud for floor normal" << std::endl;
     //--- Convert Incoming Cloud --- //
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud( new pcl::PointCloud<pcl::PointXYZ> );
@@ -104,8 +118,6 @@ void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 	floorNorm.y = coefficients_plane->values[1];
 	floorNorm.z = coefficients_plane->values[2];
 	
-	std::cout << "Publishing floor normal" << std::endl;
-	std::cout << std::endl;
 	pub.publish(floorNorm);
 }
 
@@ -122,6 +134,9 @@ int main(int argc, char** argv)
     // Create a ROS subscriber for the input point cloud
     ros::Subscriber sub = nh.subscribe ("camera/depth_registered/points", 1, cloud_cb);
 
+	// Create visualizer
+	//visualizer_o_Ptr = pcl::visualization::PCLVisualizer::Ptr(new pcl::visualization::PCLVisualizer());
+	
     // Spin
     ros::spin();
 }
