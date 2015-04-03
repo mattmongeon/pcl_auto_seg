@@ -58,8 +58,23 @@ void visualize(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud, pcl::visualization::P
 	pVisualizer->addPointCloud(pCloud, "cloud");
 
 	//reload visualizer content
-	pVisualizer->spinOnce(1);
+	pVisualizer->spinOnce(1000000);
 }
+
+void visualize(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud, pcl::PointCloud<pcl::PointXYZ>::Ptr pBlock, pcl::visualization::PCLVisualizer::Ptr pVisualizer)
+{
+    //init visualizer
+	pVisualizer->setSize(640, 480);
+	pVisualizer->setPosition(640, 0);
+	pVisualizer->setBackgroundColor(0x00, 0x00, 0x00);
+	pVisualizer->initCameraParameters();
+	pVisualizer->addPointCloud(pCloud, "cloud");
+	pVisualizer->addPointCloud(pBlock, "block");
+
+	//reload visualizer content
+	pVisualizer->spinOnce(1000000);
+}
+
 
 
 // Align a collection of object templates to a sample point cloud
@@ -75,17 +90,30 @@ void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 	// --- Z-Filter And Downsample Cloud --- //
 
 	// Preprocess the cloud by removing distant points
-	const float depth_limit = 1.5;
-	pcl::PassThrough<pcl::PointXYZ> pass;
-	pass.setInputCloud( cloud );
-	pass.setFilterFieldName( "z" );
-	pass.setFilterLimits( 0, 1.5 );
-	pass.filter( *cloud );
+	pcl::PassThrough<pcl::PointXYZ> pass_z;
+	pass_z.setInputCloud( cloud );
+	pass_z.setFilterFieldName( "z" );
+	pass_z.setFilterLimits( 0, 2.0 );
+	pass_z.filter( *cloud );
+
+	pcl::PassThrough<pcl::PointXYZ> pass_y;
+	pass_y.setInputCloud( cloud );
+	pass_y.setFilterFieldName("y");
+	pass_y.setFilterLimits( -0.5, 0.2 );
+	pass_y.filter( *cloud );
+	
+	pcl::PassThrough<pcl::PointXYZ> pass_x;
+	pass_x.setInputCloud( cloud );
+	pass_x.setFilterFieldName("x");
+	pass_x.setFilterLimits( -0.5, 0.5 );
+	pass_x.filter( *cloud );
 
 	// It is possible to not have any points after z-filtering (ex. if we are looking up).
 	// Just bail if there is nothing left.
 	if( cloud->points.size() == 0 )
 		return;
+
+	//visualize( cloud, visualizer_o_Ptr );
 
 	
 	// --- Calculate Scene Normals --- //
@@ -179,8 +207,13 @@ void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 	std::cerr << "R = | " << rotation(1,0) << " " << rotation(1,1) << " " << rotation(1,2) << " | " << std::endl;
 	std::cerr << "    | " << rotation(2,0) << " " << rotation(2,1) << " " << rotation(2,2) << " | " << std::endl;
 	std::cerr << std::endl;
-	std::cerr << "t = < " << translation(0) << ", " << translation(1) << ", " << translation(2) << " >" << std::endl;
+	std::cerr << "t = < " << translation(0) << ", " << translation(1) << ", " << translation(2) << " >" << std::endl << std::endl;
 
+
+	// pcl::PointCloud<pcl::PointXYZ> transformedCloud;
+	// pcl::transformPointCloud( *best_template.getPointCloud(), transformedCloud, best_alignment.final_transformation);
+	// visualize( filteredScene, transformedCloud.makeShared(), visualizer_o_Ptr );
+	
 
 	// --- Publish --- //
 
