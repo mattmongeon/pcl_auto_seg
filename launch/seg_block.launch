@@ -8,5 +8,7 @@
 
 	<node name="floor_normal_pub" pkg="pcl_auto_seg" type="floor_normal_pub" output="screen"/>
 
+	<node name="rgb_block_pos" pkg="pcl_auto_seg" type="rgb_block_pos.py" output="screen"/>
+
 </launch>
 
