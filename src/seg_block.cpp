@@ -80,7 +80,6 @@ void visualize(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud, pcl::PointCloud<pcl::
 // Align a collection of object templates to a sample point cloud
 void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 {
-	std::cout << "Received point cloud" << std::endl;
     //--- Convert Incoming Cloud --- //
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud( new pcl::PointCloud<pcl::PointXYZ> );
