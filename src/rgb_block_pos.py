@@ -45,8 +45,8 @@ class cImageHandler:
 
         # cv2.imshow("RGB Image", cv_image)
         # cv2.imshow("S Image", s)
-        # cv2.imshow("S Thresholded", threshS)
-        # cv2.waitKey(3)
+        cv2.imshow("S Thresholded", threshS)
+        cv2.waitKey(3)
 
         p = Point(centroidx, centroidy, 0)
         self.point_pub.publish(p)
