@@ -19,13 +19,15 @@ class cImageHandler:
 
     def callback(self, data):
         sGauss = 5
-        sThresh = 100
+        sThresh = 80
 
         cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
             
         hsv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
         
+        h = hsv_image[:,:,0]
         s = hsv_image[:,:,1]
+        v = hsv_image[:,:,2]
         
 
         sGauss = cv2.GaussianBlur( s, (sGauss, sGauss), 0 )
@@ -43,8 +45,10 @@ class cImageHandler:
 
         # print "centroid:  ", centroidx, centroidy, "\n"
 
-        # cv2.imshow("RGB Image", cv_image)
+        cv2.imshow("RGB Image", cv_image)
+        # cv2.imshow("H Image", h)
         # cv2.imshow("S Image", s)
+        # cv2.imshow("V Image", v)
         cv2.imshow("S Thresholded", threshS)
         cv2.waitKey(3)
 
