@@ -32,6 +32,7 @@
 // --- Declarations --- //
 
 ros::Publisher pub;
+ros::Publisher cloud_pub;
 pcl::visualization::PCLVisualizer::Ptr visualizer_o_Ptr;
 
 typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudPtr;
@@ -163,6 +164,9 @@ void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 	extract_normals.setIndices( inliers_plane );
 	extract_normals.filter( *filteredSceneNormals );	
 
+	if( filteredScene->points.size() == 0 )
+		return;
+	
 	
 	// --- Set Our Target Cloud --- //
 
@@ -236,6 +240,10 @@ void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 	
 	std::cerr << "Publishing" << std::endl;
 	pub.publish(pose);
+
+	sensor_msgs::PointCloud2 toPub;
+    pcl::toROSMsg( *filteredScene, toPub );
+	cloud_pub.publish(toPub);
 }
 
 
@@ -278,9 +286,10 @@ int main(int argc, char** argv)
 	
 	// Create visualizer
 	//visualizer_o_Ptr = pcl::visualization::PCLVisualizer::Ptr(new pcl::visualization::PCLVisualizer());
-	
+
     // Create a ROS publisher for the pose of the block relative to the ASUS.
     pub = nh.advertise<geometry_msgs::Pose>("/block_pose", 1);
+	cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/filtered_cloud", 1);
 
     // Create a ROS subscriber for the input point cloud
     ros::Subscriber sub = nh.subscribe ("camera/depth_registered/points", 1, cloud_cb);
