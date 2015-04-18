@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <std_msgs/Int32.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -34,6 +35,8 @@ pcl::visualization::PCLVisualizer::Ptr visualizer_o_Ptr;
 typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudPtr;
 typedef pcl::PointCloud<pcl::Normal>::Ptr NormalCloudPtr;
 
+int controllerState = 0;
+
 
 void visualize(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud, pcl::visualization::PCLVisualizer::Ptr pVisualizer)
 {
@@ -52,6 +55,9 @@ void visualize(pcl::PointCloud<pcl::PointXYZ>::Ptr pCloud, pcl::visualization::P
 // Align a collection of object templates to a sample point cloud
 void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 {
+  if( controllerState != 1 )
+    return;
+
     //--- Convert Incoming Cloud --- //
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud( new pcl::PointCloud<pcl::PointXYZ> );
@@ -122,6 +128,12 @@ void cloud_cb( const sensor_msgs::PointCloud2ConstPtr& input )
 }
 
 
+void current_state_cb( const std_msgs::Int32& state )
+{
+  controllerState = state.data;
+}
+
+
 int main(int argc, char** argv)
 {
     // Initialize ROS
@@ -133,6 +145,10 @@ int main(int argc, char** argv)
 
     // Create a ROS subscriber for the input point cloud
     ros::Subscriber sub = nh.subscribe ("camera/depth_registered/points", 1, cloud_cb);
+
+    // Create a subscriber for the current state
+    ros::Subscriber stateSub = nh.subscribe("/control_current_state", 1, current_state_cb );
+
 
 	// Create visualizer
 	//visualizer_o_Ptr = pcl::visualization::PCLVisualizer::Ptr(new pcl::visualization::PCLVisualizer());
